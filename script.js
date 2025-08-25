@@ -75,6 +75,8 @@ const App = function () {
         mainContent: document.getElementById('main-content'), appHeader: document.getElementById('app-header'), appNav: document.getElementById('app-nav'), adminNavButton: document.getElementById('admin-nav-button'), userNameHeader: document.getElementById('user-name-header'), userPointsHeader: document.getElementById('user-points-header'), modal: document.getElementById('modal'), modalIcon: document.getElementById('modal-icon'), modalTitle: document.getElementById('modal-title'), modalMessage: document.getElementById('modal-message'), modalButtons: document.getElementById('modal-buttons'), fullscreenModal: document.getElementById('fullscreen-modal'), fullscreenModalTitle: document.getElementById('fullscreen-modal-title'), fullscreenModalContent: document.getElementById('fullscreen-modal-content'), loadingOverlay: document.getElementById('loading-overlay'), loadingText: document.getElementById('loading-text'), appContainer: document.getElementById('app'),
     };
 
+    this.map = null; // <-- ADD THIS LINE
+
     // --- TEMPLATES / VIEWS ---
     this.templates = {
         auth: () => `
@@ -901,7 +903,19 @@ const App = function () {
         }
     };
 
+    this.eventIcon = L.icon({
+        iconUrl: 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExN2x5MDR4dzVkYmo3OThhdTc3Z2F6Njhsc3k0dGhvN2t4em11d25haCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/EOIQArrlGT8SeIvYma/giphy.gif', // Example icon URL for events
+        iconSize: [38, 38], // Size of the icon
+        iconAnchor: [19, 38], // Point of the icon which will correspond to marker's location
+        popupAnchor: [0, -42] // Point from which the popup should open relative to the iconAnchor
+    });
 
+    this.rewardIcon = L.icon({
+        iconUrl: 'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExcGZhcHV1ZDhkbXducXp4cGQ0dHl3ZGhrc2tubzhmMDdsanBnbGdsMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/30b4QdhJGC3OYuepgu/giphy.gif', // Example icon URL for rewards
+        iconSize: [38, 38],
+        iconAnchor: [19, 38],
+        popupAnchor: [0, -42]
+    });
     // --- MAP ---
     this.initUserMap = () => {
         const mapElement = document.getElementById('user-map');
@@ -917,14 +931,57 @@ const App = function () {
         // Add markers for each spot
         this.state.mapSpots.forEach(spot => {
             let popupContent = '<strong>QR Spot</strong><br>Unknown Type';
+            let customIcon;
             const item = this.getItemForSpot(spot);
+
             if (item) {
                 popupContent = `<strong>${item.name}</strong><br><span class="text-xs">${spot.spotType.charAt(0).toUpperCase() + spot.spotType.slice(1)} Spot</span>`;
             }
-            L.marker([spot.lat, spot.lng]).addTo(map)
+
+            switch (spot.spotType) {
+                case 'event':
+                    customIcon = this.eventIcon;
+                    break;
+                case 'reward':
+                    customIcon = this.rewardIcon;
+                    break;
+                case 'badge':
+                    const badge = this.getItemForSpot(spot);
+                    if (badge && badge.icon.startsWith('http')) {
+                        customIcon = L.icon({
+                            iconUrl: badge.icon,
+                            iconSize: [38, 38],
+                            iconAnchor: [19, 38],
+                            popupAnchor: [0, -42]
+                        });
+                    } else {
+                        // Fallback icon if the badge icon is not a URL
+                        customIcon = L.icon({
+                            iconUrl: 'https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWh6MWo0b2F3azc3NXBsM2xzMDhycXdoNTZ5YXRtNHR3eHhydzltNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/AD8kBgyVlNBcoxuVSm/giphy.gif', // Default badge icon
+                            iconSize: [38, 38],
+                            iconAnchor: [19, 38],
+                            popupAnchor: [0, -42]
+                        });
+                    }
+                    break;
+                default:
+                    // A default icon for any other spot types
+                    customIcon = L.icon({
+                        iconUrl: 'https://img.icons8.com/ios-filled/50/000000/marker.png',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30],
+                        popupAnchor: [0, -34]
+                    });
+            }
+
+            L.marker([spot.lat, spot.lng], {
+                icon: customIcon
+            }).addTo(map)
                 .bindPopup(popupContent);
         });
     };
+
+  
 
     this.getItemForSpot = (spot) => {
         if (spot.spotType === 'event') {
