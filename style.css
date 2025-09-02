@@ -1,126 +1,148 @@
 /* Custom font and base styling */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 body {
-    font-family: 'Inter', sans-serif;
-    -webkit-tap-highlight-color: transparent;
+  font-family: "Inter", sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
+#admin-map {
+  width: 100%;
+  height: 60vh; /* Use 60% of the viewport height for responsiveness */
+  min-height: 300px; /* Ensure it's never smaller than 300px */
+  position: relative; /* Helps with internal map element positioning */
+  z-index: 1; /* Prevents it from being hidden behind other elements */
+  
+}
+
+setTimeout(() => {
+    if (this.adminMap) {
+        this.adminMap.invalidateSize();
+    }
+}, 100);
+
 #app {
-    position: relative;
-    z-index: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .pride-gradient-bg {
-    background: linear-gradient(135deg, #8B5CF6, #EC4899, #24b7fb);
+  background: linear-gradient(135deg, #8b5cf6, #ec4899, #24b7fb);
 }
 
 .pride-gradient-text {
-    background: linear-gradient(135deg, #8B5CF6, #EC4899, #24b7fb);
-    -webkit-background-clip: text;
-    background-clip: text;
-    /* Standard property for compatibility */
-    -webkit-text-fill-color: transparent;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899, #24b7fb);
+  -webkit-background-clip: text;
+  background-clip: text;
+  /* Standard property for compatibility */
+  -webkit-text-fill-color: transparent;
 }
 
 .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
 .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .modal-fade-in {
-    animation: fadeIn 0.2s ease-out forwards;
+  animation: fadeIn 0.2s ease-out forwards;
 }
 
 @keyframes fadeInItem {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .fade-in-item {
-    animation: fadeInItem 0.5s ease-out forwards;
+  animation: fadeInItem 0.5s ease-out forwards;
 }
-
 
 /* --- Theme Styles --- */
 
 /* Default Theme */
 body.theme-default {
-    background-color: #111827;
+  background-color: #111827;
 }
 
 body.theme-default #app {
-    background-color: #1f2937;
-    color: #f9fafb;
-    background-image: url('https://i.pinimg.com/736x/da/97/9f/da979f580fe467231df9411605f2e3eb.jpg');
-    background-size: cover;
-    background-position: center;
-
+  background-color: #1f2937;
+  color: #f9fafb;
+  background-image: url("https://i.pinimg.com/736x/da/97/9f/da979f580fe467231df9411605f2e3eb.jpg");
+  background-size: cover;
+  background-position: center;
 }
 
 body.theme-default .bg-gray-700 {
-    background-color: #37415198;
+  background-color: #37415198;
 }
 
 body.theme-default .bg-gray-800 {
-    background-color: #1f2937;
+  background-color: #1f2937;
 }
 
 body.theme-default .bg-gray-900 {
-    background-color: #111827;
+  background-color: #111827;
 }
 
 body.theme-default .bg-gray-900\/50 {
-    background-color: rgba(17, 24, 39, 0.5);
+  background-color: rgba(17, 24, 39, 0.5);
 }
 
 body.theme-default .text-gray-300 {
-    color: #d1d5db;
+  color: #d1d5db;
 }
 
 body.theme-default .text-gray-400 {
-    color: #9ca3af;
+  color: #9ca3af;
 }
 
 body.theme-rainbow #video-background-container {
-    display: block;
+  display: block;
 }
 
 body.theme-rainbow #app {
-    background-color: rgba(0, 0, 0, 0.6);
-    background-image: url('https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/236ecf96-a881-428d-9213-83d1c7313131/dkdu4if-1aed848a-3318-4cb9-af9f-338013f9960c.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzIzNmVjZjk2LWE4ODEtNDI4ZC05MjEzLTgzZDFjNzMxMzEzMVwvZGtkdTRpZi0xYWVkODQ4YS0zMzE4LTRjYjktYWY5Zi0zMzgwMTNmOTk2MGMuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.S-HYO2Nr6J8r2MPfGhoVfsXFuFnuIgjkCK1Ed-4ZtzM');
-    background-size: cover;
-    background-position: center;
-    /* Dark overlay for readability */
+  background-color: rgba(0, 0, 0, 0.6);
+  background-image: url("https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/236ecf96-a881-428d-9213-83d1c7313131/dkdu4if-1aed848a-3318-4cb9-af9f-338013f9960c.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzIzNmVjZjk2LWE4ODEtNDI4ZC05MjEzLTgzZDFjNzMxMzEzMVwvZGtkdTRpZi0xYWVkODQ4YS0zMzE4LTRjYjktYWY5Zi0zMzgwMTNmOTk2MGMuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.S-HYO2Nr6J8r2MPfGhoVfsXFuFnuIgjkCK1Ed-4ZtzM");
+  background-size: cover;
+  background-position: center;
+  /* Dark overlay for readability */
 }
 
 body.theme-rainbow .pride-gradient-bg,
 body.theme-rainbow .accent-pink-500 {
-    background: linear-gradient(135deg, red, orange, yellow, green, blue, indigo, violet);
-    accent-color: violet;
+  background: linear-gradient(
+    135deg,
+    red,
+    orange,
+    yellow,
+    green,
+    blue,
+    indigo,
+    violet
+  );
+  accent-color: violet;
 }
 
 body.theme-rainbow .pride-gradient-text,
@@ -130,43 +152,64 @@ body.theme-rainbow .text-amber-400,
 body.theme-rainbow .text-green-400,
 body.theme-rainbow .text-red-400,
 body.theme-rainbow .text-blue-400 {
-    background: linear-gradient(135deg, red, orange, yellow, green, blue, indigo, violet);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+  background: linear-gradient(
+    135deg,
+    red,
+    orange,
+    yellow,
+    green,
+    blue,
+    indigo,
+    violet
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 body.theme-rainbow .border-pink-500,
 body.theme-rainbow .border-purple-500 {
-    border-image: linear-gradient(135deg, red, orange, yellow, green, blue, indigo, violet) 1;
+  border-image: linear-gradient(
+      135deg,
+      red,
+      orange,
+      yellow,
+      green,
+      blue,
+      indigo,
+      violet
+    )
+    1;
 }
 
 /* Rainbow-Linear Overrides */
 body.theme-rainbow2 {
-    background: linear-gradient(45deg, #ff00b3, #0084ff, #0099ff);
-    background-size: 400% 400%;
-    animation: rainbow-bg 15s ease infinite;
+  background: linear-gradient(45deg, #ff00b3, #0084ff, #0099ff);
+  background-size: 400% 400%;
+  animation: rainbow-bg 15s ease infinite;
 }
 
 @keyframes rainbow-bg {
-    0% {
-        background-position: 0% 50%;
-    }
+  0% {
+    background-position: 0% 50%;
+  }
 
-    50% {
-        background-position: 100% 50%;
-    }
+  50% {
+    background-position: 100% 50%;
+  }
 
-    100% {
-        background-position: 0% 50%;
-    }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 body.theme-rainbow2 #app {
-    background: linear-gradient(45deg, #ff00b3, #0084ff, #0099ff);
-    background-size: 400% 100%;
-    animation: rainbow-bg 15s ease infinite;
-    /* background-size: cover;
+    background-image: url("https://i.pinimg.com/1200x/d4/47/07/d44707c4a1f544cca23c2e1d72646b6d.jpg");
+ 
+  background: linear-gradient(45deg, #ff00b3, #0084ff, #0099ff);
+  background-size: 400% 100%;
+  animation: rainbow-bg 15s ease infinite;
+  /* background-size: cover;
     background-position: center; */
 }
 
@@ -177,16 +220,16 @@ body.theme-rainbow2 .bg-gray-900\/50,
 body.theme-rainbow2 .bg-gray-700,
 body.theme-rainbow2 .bg-gray-800,
 body.theme-rainbow2 .bg-gray-900 {
-    background-color: #000000 !important;
+  background-color: #001d3f !important;
 }
 
 body.theme-rainbow2 .text-white {
-    color: #ffffff !important;
+  color: #ff67e6 !important;
 }
 
 body.theme-rainbow2 .text-gray-300,
 body.theme-rainbow2 .text-gray-400 {
-    color: #ffffff !important;
+  color: #eb88ff !important;
 }
 
 body.theme-rainbow2 .pride-gradient-text,
@@ -196,35 +239,35 @@ body.theme-rainbow2 .text-amber-400,
 body.theme-rainbow2 .text-green-400,
 body.theme-rainbow2 .text-red-400,
 body.theme-rainbow2 .text-blue-400 {
-    color: #ffffff !important;
-    background: none;
-    -webkit-text-fill-color: unset;
+  color: #ff00dd !important;
+  background: none;
+  -webkit-text-fill-color: unset;
 }
 
 body.theme-rainbow2 .pride-gradient-bg,
 body.theme-rainbow2 .accent-pink-500 {
-    background: #474747 !important;
-    accent-color: #ad8500;
+  background: #00c3ff !important;
+  accent-color: #ff62e5 ;
 }
 
 body.theme-rainbow2 .border-pink-500,
 body.theme-rainbow2 .border-purple-500 {
-    border-color: #f048ff !important;
+  border-color: #ff1fda !important;
 }
-
-
 
 /* Light Theme Overrides */
 body.theme-light {
-    background-color: #e5e7eb !important;
+  background-color: #e5e7eb !important;
 }
 
 body.theme-light #app {
-    background-color: #f3f4f6 !important;
-    background-image: url('https://i.pinimg.com/736x/89/27/30/89273078173e894d00701aee921cdaea.jpg');
-    color: #272300 !important;
-    background-size: cover;
-    background-position: center;
+  background-color: #f3f4f6 !important;
+  background-image: url("https://i.pinimg.com/736x/89/27/30/89273078173e894d00701aee921cdaea.jpg");
+  color: #272300 !important;
+  background-size: cover;
+  background-position: center;
+
+
 }
 
 body.theme-light #app-header,
@@ -234,16 +277,16 @@ body.theme-light .bg-gray-900\/50,
 body.theme-light .bg-gray-700,
 body.theme-light .bg-gray-800,
 body.theme-light .bg-gray-900 {
-    background-color: #e5e7eb !important;
+  background-color: #e5e7eb !important;
 }
 
 body.theme-light .text-white {
-    color: #302f00 !important;
+  color: #302f00 !important;
 }
 
 body.theme-light .text-gray-300,
 body.theme-light .text-gray-400 {
-    color: #585700 !important;
+  color: #585700 !important;
 }
 
 body.theme-light .pride-gradient-text,
@@ -253,34 +296,33 @@ body.theme-light .text-amber-400,
 body.theme-light .text-green-400,
 body.theme-light .text-red-400,
 body.theme-light .text-blue-400 {
-    color: #ad8500 !important;
-    background: none;
-    -webkit-text-fill-color: unset;
+  color: #ad8500 !important;
+  background: none;
+  -webkit-text-fill-color: unset;
 }
 
 body.theme-light .pride-gradient-bg,
 body.theme-light .accent-pink-500 {
-    background: #ad8500 !important;
-    accent-color: #ad8500;
+  background: #ad8500 !important;
+  accent-color: #ad8500;
 }
 
 body.theme-light .border-pink-500,
 body.theme-light .border-purple-500 {
-    border-color: #ad8500 !important;
+  border-color: #ad8500 !important;
 }
-
 
 /* Blue Theme Overrides */
 body.theme-blue {
-    background-color: #1e3a8a !important;
+  background-color: #1e3a8a !important;
 }
 
 body.theme-blue #app {
-    background-color: #1e3a8a !important;
-    background-image: url(' https://i.pinimg.com/1200x/46/fb/a9/46fba9944f3af578a9d831bbe7971deb.jpg');
-    color: #ffffff !important;
-    background-size: cover;
-    background-position: center;
+  background-color: #1e3a8a !important;
+  background-image: url(" https://i.pinimg.com/1200x/46/fb/a9/46fba9944f3af578a9d831bbe7971deb.jpg");
+  color: #ffffff !important;
+  background-size: cover;
+  background-position: center;
 }
 
 body.theme-blue #app-header,
@@ -290,16 +332,16 @@ body.theme-blue .bg-gray-900\/50,
 body.theme-blue .bg-gray-700,
 body.theme-blue .bg-gray-800,
 body.theme-blue .bg-gray-900 {
-    background-color: #1e40af !important;
+  background-color: #1e40af !important;
 }
 
 body.theme-blue .text-white {
-    color: #eff6ff !important;
+  color: #eff6ff !important;
 }
 
 body.theme-blue .text-gray-300,
 body.theme-blue .text-gray-400 {
-    color: #dbeafe !important;
+  color: #dbeafe !important;
 }
 
 body.theme-blue .pride-gradient-text,
@@ -309,32 +351,31 @@ body.theme-blue .text-amber-400,
 body.theme-blue .text-green-400,
 body.theme-blue .text-red-400,
 body.theme-blue .text-blue-400 {
-    color: #60a5fa !important;
-    background: none;
-    -webkit-text-fill-color: unset;
+  color: #60a5fa !important;
+  background: none;
+  -webkit-text-fill-color: unset;
 }
 
 body.theme-blue .pride-gradient-bg,
 body.theme-blue .accent-pink-500 {
-    background: #60a5fa !important;
-    accent-color: #60a5fa;
+  background: #60a5fa !important;
+  accent-color: #60a5fa;
 }
 
 body.theme-blue .border-pink-500,
 body.theme-blue .border-purple-500 {
-    border-color: #60a5fa !important;
+  border-color: #60a5fa !important;
 }
 
 /* Green Theme Overrides */
 body.theme-green {
-    background-color: #064e3b !important;
-
+  background-color: #064e3b !important;
 }
 
 body.theme-green #app {
-    background-image: url('  https://i.pinimg.com/736x/87/3d/90/873d90d90227a19d005d6c9c74de8d76.jpg');
-    background-color: #064e3b !important;
-    color: #ecfdf5 !important;
+  background-image: url("  https://i.pinimg.com/736x/87/3d/90/873d90d90227a19d005d6c9c74de8d76.jpg");
+  background-color: #064e3b !important;
+  color: #ecfdf5 !important;
 }
 
 body.theme-green #app-header,
@@ -344,16 +385,16 @@ body.theme-green .bg-gray-900\/50,
 body.theme-green .bg-gray-700,
 body.theme-green .bg-gray-800,
 body.theme-green .bg-gray-900 {
-    background-color: #0a2e16 !important;
+  background-color: #0a2e16 !important;
 }
 
 body.theme-green .text-white {
-    color: #ecfdf5 !important;
+  color: #ecfdf5 !important;
 }
 
 body.theme-green .text-gray-300,
 body.theme-green .text-gray-400 {
-    color: #d1fae5 !important;
+  color: #d1fae5 !important;
 }
 
 body.theme-green .pride-gradient-text,
@@ -363,34 +404,34 @@ body.theme-green .text-amber-400,
 body.theme-green .text-green-400,
 body.theme-green .text-red-400,
 body.theme-green .text-blue-400 {
-    color: #5cff6a !important;
-    background: none;
-    -webkit-text-fill-color: unset;
+  color: #5cff6a !important;
+  background: none;
+  -webkit-text-fill-color: unset;
 }
 
 body.theme-green .pride-gradient-bg,
 body.theme-green .accent-pink-500 {
-    background: #00d435 !important;
-    accent-color: #00ff55;
+  background: #00d435 !important;
+  accent-color: #00ff55;
 }
 
 body.theme-green .border-pink-500,
 body.theme-green .border-purple-500 {
-    border-color: #00f351 !important;
+  border-color: #00f351 !important;
 }
 
 /* Pink Theme Overrides */
 body.theme-pink {
-    background-color: #8318439a !important;
+  background-color: #8318439a !important;
 }
 
 body.theme-pink #app {
-    color: #fce7f3 !important;
-    background-color: #d12a6d !important;
-    color: #fce7f3 !important;
-    background-image: url(' https://i.pinimg.com/736x/69/38/e4/6938e42485cf0eaf14ac0e9848fd0e0f.jpg');
-    background-size: cover;
-    background-position: center;
+  color: #fce7f3 !important;
+  background-color: #d12a6d !important;
+  color: #fce7f3 !important;
+  background-image: url(" https://i.pinimg.com/736x/69/38/e4/6938e42485cf0eaf14ac0e9848fd0e0f.jpg");
+  background-size: cover;
+  background-position: center;
 }
 
 body.theme-pink #app-header,
@@ -400,16 +441,16 @@ body.theme-pink .bg-gray-900\/50,
 body.theme-pink .bg-gray-700,
 body.theme-pink .bg-gray-800,
 body.theme-pink .bg-gray-900 {
-    background-color: #9d174dbb !important;
+  background-color: #9d174dbb !important;
 }
 
 body.theme-pink .text-white {
-    color: #fce7f3 !important;
+  color: #fce7f3 !important;
 }
 
 body.theme-pink .text-gray-300,
 body.theme-pink .text-gray-400 {
-    color: #fbcfe8 !important;
+  color: #fbcfe8 !important;
 }
 
 body.theme-pink .pride-gradient-text,
@@ -419,18 +460,18 @@ body.theme-pink .text-amber-400,
 body.theme-pink .text-green-400,
 body.theme-pink .text-red-400,
 body.theme-pink .text-blue-400 {
-    color: #f472b6 !important;
-    background: none;
-    -webkit-text-fill-color: unset;
+  color: #f472b6 !important;
+  background: none;
+  -webkit-text-fill-color: unset;
 }
 
 body.theme-pink .pride-gradient-bg,
 body.theme-pink .accent-pink-500 {
-    background: #f472b6 !important;
-    accent-color: #f472b6;
+  background: #f472b6 !important;
+  accent-color: #f472b6;
 }
 
 body.theme-pink .border-pink-500,
 body.theme-pink .border-purple-500 {
-    border-color: #f472b6 !important;
+  border-color: #f472b6 !important;
 }
