@@ -43,6 +43,10 @@ const App = function () {
   // --- STATE MANAGEMENT ---
   const currentDate = new Date();
   this.state = {
+    chats: [], // Stores the list of chat conversations for the current user
+    currentChatId: null, // Stores the ID of the chat currently being viewed
+    currentChatMessages: [], // Stores messages for the currentChatId
+    chatListeners: [], // To store unsubscribe functions for chat-related snapshots
     adminRewardsView: "form", // Can be 'form' or 'list'
     calendarDate: currentDate,
     currentPage: "auth",
@@ -78,6 +82,355 @@ const App = function () {
     calendarDate: new Date(),
   };
 
+  //   // -- CHAT --
+  // this.listenToUserChats = () => {
+  //   if (!this.state.loggedInUser ) return;
+
+  //   const q = query(
+  //     collection(this.fb.db, this.paths.chats),
+  //     where('participants', 'array-contains', this.state.loggedInUser .id),
+  //     orderBy('lastMessageTimestamp', 'desc')
+  //   );
+
+  //   const unsubscribe = onSnapshot(q, (snapshot) => {
+  //     this.state.chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  //     if (this.state.currentPage === 'messages' && !this.state.currentChatId) {
+  //       this.render();
+  //     }
+  //   }, (error) => {
+  //     console.error("Error listening to user chats:", error);
+  //   });
+
+  //   this.state.chatListeners.push(unsubscribe);
+  // };
+
+  // ... existing methods ...
+
+  // --- Chat Functionality ---
+
+  this.openChat = (chatId) => {
+    this.state.currentChatId = chatId;
+    this.detachChatListeners(); // Remove old message listeners
+    this.listenToChatMessages(chatId);
+    this.navigateTo("messages");
+
+    setTimeout(() => {
+      const messagesContainer = document.getElementById("messages-container");
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    }, 100);
+  };
+
+  this.listenToChatMessages = (chatId) => {
+    if (!chatId) return;
+
+    const q = query(
+      collection(this.fb.db, this.paths.messages(chatId)),
+      orderBy("timestamp", "asc")
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        this.state.currentChatMessages = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        if (
+          this.state.currentPage === "messages" &&
+          this.state.currentChatId === chatId
+        ) {
+          this.render();
+
+          setTimeout(() => {
+            const messagesContainer =
+              document.getElementById("messages-container");
+            if (messagesContainer) {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+          }, 50);
+        }
+      },
+      (error) => {
+        console.error("Error listening to chat messages:", error);
+      }
+    );
+
+    this.state.chatListeners.push(unsubscribe);
+  };
+
+  this.detachChatListeners = () => {
+    this.state.chatListeners.forEach((unsub) => unsub());
+    this.state.chatListeners = [];
+  };
+
+  // Sends a message in the current chat
+  this.sendMessage = async (e) => {
+    e.preventDefault();
+    const messageText = e.target.elements.messageText.value.trim();
+    if (!messageText || !this.state.currentChatId || !this.state.loggedInUser) {
+      return;
+    }
+
+    // 1. Create a temporary message for an instant UI update.
+    const optimisticMessage = {
+      id: `temp_${Date.now()}`,
+      senderId: this.state.loggedInUser.id,
+      text: messageText,
+      timestamp: Timestamp.now(), // Use local time for immediate display
+    };
+
+    // 2. Add the message to the local state and clear the input field.
+    this.state.currentChatMessages.push(optimisticMessage);
+    e.target.reset();
+
+    // 3. Re-render the UI to show the new message right away.
+    this.render();
+
+    // 4. Scroll to the bottom to view the newly sent message.
+    setTimeout(() => {
+      const messagesContainer = document.getElementById("messages-container");
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    }, 50);
+
+    try {
+      // 5. In the background, send the actual message to the database.
+      const chatRef = doc(
+        this.fb.db,
+        this.paths.chatDoc(this.state.currentChatId)
+      );
+      const messagesCollectionRef = collection(chatRef, "messages");
+
+      await addDoc(messagesCollectionRef, {
+        senderId: this.state.loggedInUser.id,
+        text: messageText,
+        timestamp: Timestamp.now(),
+      });
+
+      // Update the parent chat document with the last message info.
+      await updateDoc(chatRef, {
+        lastMessage: messageText,
+        lastMessageTimestamp: Timestamp.now(),
+      });
+
+      // The real-time listener will automatically refresh the chat
+      // with the final message from the server, replacing the temporary one.
+    } catch (error) {
+      console.error("Error sending message:", error);
+      this.showModal("error", "Message Error", "Failed to send message.");
+
+      // If sending fails, remove the optimistic message from the UI.
+      this.state.currentChatMessages = this.state.currentChatMessages.filter(
+        (msg) => msg.id !== optimisticMessage.id
+      );
+      this.render(); // Re-render to show the message has been removed.
+    }
+  };
+
+  // Initiates a chat with a specific user from the directory
+  this.startChatWithUser = async (targetUserId) => {
+    const currentUser = this.state.loggedInUser;
+    if (!currentUser || !targetUserId || currentUser.id === targetUserId) {
+      this.showModal("error", "Chat Error", "Cannot start chat.");
+      return;
+    }
+
+    // Check if chat exists
+    const q = query(
+      collection(this.fb.db, this.paths.chats),
+      where("participants", "array-contains", currentUser.id)
+    );
+    const snapshot = await getDocs(q);
+
+    let existingChatId = null;
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      if (
+        data.participants.includes(targetUserId) &&
+        data.participants.length === 2
+      ) {
+        existingChatId = doc.id;
+      }
+    });
+
+    if (existingChatId) {
+      this.openChat(existingChatId);
+    } else {
+      // Create new chat
+      const newChatRef = await addDoc(
+        collection(this.fb.db, this.paths.chats),
+        {
+          participants: [currentUser.id, targetUserId],
+          createdAt: Timestamp.now(),
+          type: "direct",
+          lastMessage: "",
+          lastMessageTimestamp: Timestamp.now(),
+        }
+      );
+      this.openChat(newChatRef.id);
+    }
+  };
+  // Opens a specific chat conversation
+  this.openChat = (chatId) => {
+    this.state.currentChatId = chatId;
+    this.detachChatListeners(); // Detach previous chat messages listener
+    this.listenToChatMessages(chatId); // Start listening to messages for this chat
+    this.navigateTo("messages"); // Navigate to the messages view
+    // Scroll to bottom of messages after rendering
+    setTimeout(() => {
+      const messagesContainer = document.getElementById("messages-container");
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    }, 100); // Small delay to allow rendering
+  };
+
+  // Closes the active chat and returns to the chat list
+  this.closeChat = () => {
+    this.state.currentChatId = null;
+    this.state.currentChatMessages = [];
+    this.detachChatListeners(); // Detach messages listener
+    this.listenToUserChats();
+    this.navigateTo("messages"); // Navigate back to the messages view (which will show the list)
+  };
+
+  // Sends a message in the current chat
+  this.sendMessage = async (e) => {
+    e.preventDefault();
+    const messageText = e.target.elements.messageText.value.trim();
+    if (!messageText || !this.state.currentChatId || !this.state.loggedInUser)
+      return;
+
+    try {
+      const chatRef = doc(
+        this.fb.db,
+        this.paths.chatDoc(this.state.currentChatId)
+      );
+      const messagesCollectionRef = collection(chatRef, "messages");
+
+      await addDoc(messagesCollectionRef, {
+        senderId: this.state.loggedInUser.id,
+        text: messageText,
+        timestamp: Timestamp.now(),
+      });
+
+      // Update the parent chat document with the last message
+      await updateDoc(chatRef, {
+        lastMessage: messageText,
+        lastMessageTimestamp: Timestamp.now(),
+      });
+
+      e.target.reset(); // Clear input field
+      // Scroll to bottom after sending
+      setTimeout(() => {
+        const messagesContainer = document.getElementById("messages-container");
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 50);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      this.showModal("error", "Message Error", "Failed to send message.");
+    }
+  };
+
+  // Listens to real-time updates for the current user's chats list
+
+ this.listenToUserChats = () => {
+   if (!this.state.loggedInUser) {
+     console.log("No logged in user, skipping chat listener");
+     return;
+   }
+
+   // The .orderBy clause has been removed from this query to prevent the indexing error.
+   const q = query(
+     collection(this.fb.db, this.paths.chats),
+     where("participants", "array-contains", this.state.loggedInUser.id)
+   );
+
+   const unsubscribe = onSnapshot(
+     q,
+     (snapshot) => {
+       console.log("Chats snapshot received:", snapshot.docs.length);
+       this.state.chats = snapshot.docs.map((doc) => ({
+         id: doc.id,
+         ...doc.data(),
+       }));
+       console.log("Chats updated:", this.state.chats);
+       if (this.state.currentPage === "messages" && !this.state.currentChatId) {
+         this.render();
+       }
+     },
+     (error) => {
+       console.error("Error listening to user chats:", error);
+     }
+   );
+
+   this.state.chatListeners.push(unsubscribe);
+ };
+
+  // Listens to real-time updates for messages within a specific chat
+  this.listenToChatMessages = (chatId) => {
+    if (!chatId) return;
+
+    const q = query(
+      collection(this.fb.db, this.paths.messages(chatId)),
+      orderBy("timestamp", "asc") // Order messages chronologically
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        this.state.currentChatMessages = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        if (
+          this.state.currentPage === "messages" &&
+          this.state.currentChatId === chatId
+        ) {
+          this.render(); // Re-render active chat view
+          // Scroll to bottom of messages after new messages arrive
+          setTimeout(() => {
+            const messagesContainer =
+              document.getElementById("messages-container");
+            if (messagesContainer) {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+          }, 50);
+        }
+      },
+      (error) => {
+        console.error("Error listening to chat messages:", error);
+      }
+    );
+    this.state.chatListeners.push(unsubscribe); // Store listener
+  };
+
+  // Detaches all chat-related real-time listeners
+  this.detachChatListeners = () => {
+    this.state.chatListeners.forEach((unsubscribe) => unsubscribe());
+    this.state.chatListeners = [];
+  };
+
+  // Helper to format timestamps for display
+  this.formatTimestamp = (timestamp, includeTime = false) => {
+    if (!timestamp) return "";
+    const date = timestamp.toDate();
+    const options = { month: "short", day: "numeric" };
+    if (includeTime) {
+      options.hour = "2-digit";
+      options.minute = "2-digit";
+      options.hour12 = true;
+    }
+    return date.toLocaleString("en-US", options);
+  };
+
+  // ... rest of methods ...
+
   // --- FIREBASE INSTANCES ---
   this.fb = {
     app: null,
@@ -106,6 +459,9 @@ const App = function () {
     earnedBadges: (userId) => `artifacts/${appId}/users/${userId}/earnedBadges`,
     mapSpots: `artifacts/${appId}/public/data/mapSpots`, // <-- ADD THIS LINE
     systemLogs: `artifacts/${appId}/public/data/systemLogs`, // New path for audit logs
+    chats: `artifacts/${appId}/chats`,
+    chatDoc: (chatId) => `artifacts/${appId}/chats/${chatId}`,
+    messages: (chatId) => `artifacts/${appId}/chats/${chatId}/messages`,
   };
 
   // --- DOM ELEMENTS ---
@@ -133,6 +489,156 @@ const App = function () {
 
   // --- TEMPLATES / VIEWS ---
   this.templates = {
+    // Inside this.templates = { ...
+
+    messages: () => {
+      console.log("Rendering messages template");
+      console.log("Chats:", this.state.chats);
+      console.log("Current chat ID:", this.state.currentChatId);
+      const user = this.state.loggedInUser;
+      if (!user)
+        return `<p class="text-center text-gray-400">Please log in to view messages.</p>`;
+
+      const currentChat = this.state.chats.find(
+        (chat) => chat.id === this.state.currentChatId
+      );
+      let chatPartner = null;
+      if (currentChat && currentChat.type === "direct") {
+        const otherParticipantId = currentChat.participants.find(
+          (pId) => pId !== user.id
+        );
+        chatPartner = this.state.users.find((u) => u.id === otherParticipantId);
+      }
+
+      return `
+    <div class="flex flex-col h-full">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">${
+          this.state.currentChatId
+            ? chatPartner
+              ? chatPartner.firstName + " " + chatPartner.lastName
+              : "Chat"
+            : "Messages"
+        }</h2>
+        ${
+          this.state.currentChatId
+            ? `
+          <button onclick="app.closeChat()" class="bg-gray-700 text-white font-semibold px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-gray-600">
+            <i data-lucide="arrow-left"></i>
+            <span>Back to Chats</span>
+          </button>
+        `
+            : ""
+        }
+      </div>
+
+      <div id="chat-list-view" class="${
+        this.state.currentChatId ? "hidden" : ""
+      } flex-grow overflow-y-auto no-scrollbar space-y-2">
+        ${
+          this.state.chats.length > 0
+            ? this.state.chats
+                .sort(
+                  (a, b) =>
+                    (b.lastMessageTimestamp?.toDate() || 0) -
+                    (a.lastMessageTimestamp?.toDate() || 0)
+                )
+                .map((chat) => {
+                  const otherParticipantId = chat.participants.find(
+                    (pId) => pId !== user.id
+                  );
+                  const chatUser = this.state.users.find(
+                    (u) => u.id === otherParticipantId
+                  );
+                  if (!chatUser) return "";
+
+                  return `
+                <div onclick="app.openChat('${
+                  chat.id
+                }')" class="bg-gray-700 p-3 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-gray-600">
+                  <img src="${
+                    chatUser.profilePic
+                  }" class="w-12 h-12 rounded-full object-cover">
+                  <div class="flex-1">
+                    <p class="font-semibold">${chatUser.firstName} ${
+                    chatUser.lastName
+                  }</p>
+                    <p class="text-sm text-gray-400 truncate">${
+                      chat.lastMessage || "Start a conversation..."
+                    }</p>
+                  </div>
+                  ${
+                    chat.lastMessageTimestamp
+                      ? `<p class="text-xs text-gray-500">${this.formatTimestamp(
+                          chat.lastMessageTimestamp
+                        )}</p>`
+                      : ""
+                  }
+                </div>
+              `;
+                })
+                .join("")
+            : '<p class="text-center text-gray-400 py-8">No conversations yet. Start one from the directory!</p>'
+        }
+      </div>
+
+      <div id="active-chat-view" class="${
+        this.state.currentChatId ? "" : "hidden"
+      } flex flex-col h-full">
+        <div id="messages-container" class="flex-grow overflow-y-auto no-scrollbar p-2 space-y-3 bg-gray-800 rounded-lg mb-3">
+          ${
+            this.state.currentChatMessages.length > 0
+              ? this.state.currentChatMessages
+                  .map((msg) => {
+                    const isSender = msg.senderId === user.id;
+                    const senderUser = this.state.users.find(
+                      (u) => u.id === msg.senderId
+                    );
+                    return `
+                <div class="flex ${
+                  isSender ? "justify-end" : "justify-start"
+                } items-end space-x-2">
+                  ${
+                    !isSender && senderUser
+                      ? `<img src="${senderUser.profilePic}" class="w-8 h-8 rounded-full object-cover">`
+                      : ""
+                  }
+                  <div class="max-w-[70%] p-3 rounded-xl ${
+                    isSender
+                      ? "bg-pink-500 text-white rounded-br-none"
+                      : "bg-gray-700 text-white rounded-bl-none"
+                  }">
+                    <p class="text-sm">${msg.text}</p>
+                    <p class="text-xs text-gray-300 text-right mt-1">${this.formatTimestamp(
+                      msg.timestamp,
+                      true
+                    )}</p>
+                  </div>
+                  ${
+                    isSender
+                      ? `<img src="${user.profilePic}" class="w-8 h-8 rounded-full object-cover">`
+                      : ""
+                  }
+                </div>
+              `;
+                  })
+                  .join("")
+              : '<p class="text-center text-gray-400 py-8">Say hello!</p>'
+          }
+        </div>
+
+        <form id="chat-input-form" class="flex space-x-2 p-2 bg-gray-900 rounded-lg">
+          <input type="text" name="messageText" placeholder="Type a message..." class="flex-grow bg-gray-700 rounded-lg p-3 outline-none text-white" autocomplete="off" required>
+          <button type="submit" class="pride-gradient-bg text-white p-3 rounded-lg">
+            <i data-lucide="send"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  `;
+    },
+    // ... rest of templates ...
+
     auth: () => `
             <div class="relative h-full">
                 <div class="absolute top-0 right-0">
@@ -270,7 +776,6 @@ const App = function () {
           name: "Idle Mining Empire",
           url: "https://now.gg/apps/marketjs/50010/idle-mining-empire.html",
         },
-       
       ];
 
       return `
@@ -553,55 +1058,67 @@ const App = function () {
             .includes(this.state.directorySearch) ||
             (u.skills || "").toLowerCase().includes(this.state.directorySearch))
       );
+      // Inside directory: () => { ... }
+      // ... existing directory template ...
       return `
-            <h2 class="text-2xl font-bold text-center mb-4">Member Directory</h2>
-            <div class="flex space-x-2 mb-4">
-                <input id="directory-search-input" type="search" placeholder="Search by name or skill..." class="w-full bg-gray-700 rounded-lg p-3">
-                <button onclick="app.handleDirectorySearch()" class="pride-gradient-bg px-4 rounded-lg"><i data-lucide="search"></i></button>
-            </div>
-            <div class="space-y-2">
-            ${
-              filteredUsers
-                .map((user) => {
-                  const earnedBadges = (user.earnedBadgeIds || [])
-                    .map((badgeId) =>
-                      this.state.badges.find((b) => b.id === badgeId)
-                    )
-                    .filter(Boolean)
-                    .slice(0, 5);
-                  return `
-                <div class="bg-gray-700 p-3 rounded-lg flex items-center space-x-4 cursor-pointer hover:bg-gray-600" onclick="app.openMemberDetailsModal('${
-                  user.id
-                }')">
-                    <img src="${
-                      user.profilePic
-                    }" class="w-12 h-12 rounded-full object-cover">
-                    <div class="flex-1">
-                        <p class="font-bold">${user.firstName} ${
-                    user.lastName
-                  }</p>
-                        <p class="text-sm text-gray-400">${
-                          user.skills || "No skills listed"
-                        }</p>
-                    </div>
-                    <div class="flex space-x-1">
-                        ${earnedBadges
-                          .map((badge) =>
-                            this.renderBadgeIcon(
-                              badge.icon,
-                              "w-5 h-5 text-amber-400"
-                            )
-                          )
-                          .join("")}
-                    </div>
+    <h2 class="text-2xl font-bold text-center mb-4">Member Directory</h2>
+    <div class="flex space-x-2 mb-4">
+        <input id="directory-search-input" type="search" placeholder="Search by name or skill..." class="w-full bg-gray-700 rounded-lg p-3">
+        <button onclick="app.handleDirectorySearch()" class="pride-gradient-bg px-4 rounded-lg"><i data-lucide="search"></i></button>
+    </div>
+    <div class="space-y-2">
+    ${
+      filteredUsers
+        .map((user) => {
+          const earnedBadges = (user.earnedBadgeIds || [])
+            .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
+            .filter(Boolean)
+            .slice(0, 5);
+          // Check if the user is the current logged-in user
+          const isCurrentUser = user.id === this.state.loggedInUser.id;
+
+          return `
+            <div class="bg-gray-700 p-3 rounded-lg flex items-center space-x-4 cursor-pointer hover:bg-gray-600" onclick="app.openMemberDetailsModal('${
+              user.id
+            }')">
+                <img src="${
+                  user.profilePic
+                }" class="w-12 h-12 rounded-full object-cover">
+                <div class="flex-1">
+                    <p class="font-bold">${user.firstName} ${user.lastName}</p>
+                    <p class="text-sm text-gray-400">${
+                      user.skills || "No skills listed"
+                    }</p>
                 </div>
-            `;
-                })
-                .join("") ||
-              '<p class="text-gray-400 text-center">No members match your search.</p>'
-            }
+                <div class="flex space-x-1">
+                    ${earnedBadges
+                      .map((badge) =>
+                        this.renderBadgeIcon(
+                          badge.icon,
+                          "w-5 h-5 text-amber-400"
+                        )
+                      )
+                      .join("")}
+                </div>
+                <!-- NEW CHAT BUTTON -->
+                ${
+                  !isCurrentUser
+                    ? `
+                <button onclick="event.stopPropagation(); app.startChatWithUser('${user.id}')" class="bg-blue-500/20 text-blue-400 p-2 rounded-md hover:bg-blue-500/40">
+                    <i data-lucide="message-square"></i>
+                </button>
+                `
+                    : ""
+                }
             </div>
-            `;
+        `;
+        })
+        .join("") ||
+      '<p class="text-gray-400 text-center">No members match your search.</p>'
+    }
+    </div>
+    `;
+      // ... rest of directory template ...
     },
 
     leaderboard: () => {
@@ -625,7 +1142,7 @@ const App = function () {
                     this.state.badges.find((b) => b.id === badgeId)
                   )
                   .filter(Boolean)
-                  .slice(0,20);
+                  .slice(0, 20);
                 const isCurrentUser = user.id === currentUser.id;
 
                 let rankIndicator = `<span class="text-lg font-bold w-8 text-center">${
@@ -1428,11 +1945,15 @@ const App = function () {
 
       this.state.listeners.push(systemLogsListener);
     }
+
+    this.listenToUserChats();
   };
 
   this.detachListeners = () => {
     this.state.listeners.forEach((unsubscribe) => unsubscribe());
     this.state.listeners = [];
+
+    this.detachChatListeners();
   };
 
   // --- ROUTING & RENDERING ---
@@ -1483,6 +2004,7 @@ const App = function () {
     }
 
     this.updateNav();
+    this.state.currentPage = page;
     this.render();
   };
 
@@ -1510,6 +2032,17 @@ const App = function () {
       );
     }
     switch (this.state.currentPage) {
+      case "messages":
+        if (this.state.currentChatId) {
+          const chatInputForm = document.getElementById("chat-input-form");
+          if (chatInputForm) {
+            chatInputForm.addEventListener(
+              "submit",
+              this.sendMessage.bind(this)
+            );
+          }
+        }
+        break;
       case "dashboard":
         if (this.state.loggedInUser.isValidated)
           this.generateQRCode(
@@ -1568,6 +2101,7 @@ const App = function () {
       case "scanner":
         this.startScanner();
         break;
+
       case "admin":
         if (document.getElementById("reward-form")) {
           document
@@ -1645,123 +2179,123 @@ const App = function () {
   });
 
   // --- MAP ---
-    this.initUserMap = () => {
-      const mapElement = document.getElementById("user-map");
-      if (!mapElement || mapElement._leaflet_id) return; // Prevent re-initialization
+  this.initUserMap = () => {
+    const mapElement = document.getElementById("user-map");
+    if (!mapElement || mapElement._leaflet_id) return; // Prevent re-initialization
 
-      // Initialize the map
-      this.map = L.map("user-map").setView([11.5833, 124.4333], 13); // Store map in this.map
+    // Initialize the map
+    this.map = L.map("user-map").setView([11.5833, 124.4333], 13); // Store map in this.map
 
-      // Add the tile layer
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(this.map);
+    // Add the tile layer
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(this.map);
 
-      // --- START: Geolocation Code for User's Current Location ---
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const userLatLng = [
-              position.coords.latitude,
-              position.coords.longitude,
-            ];
+    // --- START: Geolocation Code for User's Current Location ---
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLatLng = [
+            position.coords.latitude,
+            position.coords.longitude,
+          ];
 
-            // Add a marker for user's location
-            const userMarker = L.marker(userLatLng, {
-              icon: L.icon({
-                iconUrl:
-                  "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExN2VoNml6NTdmZmZ6M2tuczhld3F0bm8zaW5tOGtjYWMyZDRyams5bCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/GzsIjuVuxRR8cXL7Cw/giphy.gif", // or your preferred icon
-                iconSize: [38, 38],
-                iconAnchor: [19, 38],
-                popupAnchor: [1, -10],
-              }),
-              title: "Your Location",
-            }).addTo(this.map);
+          // Add a marker for user's location
+          const userMarker = L.marker(userLatLng, {
+            icon: L.icon({
+              iconUrl:
+                "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExN2VoNml6NTdmZmZ6M2tuczhld3F0bm8zaW5tOGtjYWMyZDRyams5bCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/GzsIjuVuxRR8cXL7Cw/giphy.gif", // or your preferred icon
+              iconSize: [38, 38],
+              iconAnchor: [19, 38],
+              popupAnchor: [1, -10],
+            }),
+            title: "Your Location",
+          }).addTo(this.map);
 
-            userMarker.bindPopup("You are here").openPopup();
+          userMarker.bindPopup("You are here").openPopup();
 
-            // Optionally, center the map on user's location
-            this.map.setView(userLatLng, 13);
-          },
-          (error) => {
-            console.warn(`Geolocation error: ${error.message}`);
-            // You can optionally display a message to the user if geolocation fails
-            // e.g., this.showModal('info', 'Location Unavailable', 'Could not get your current location.');
-          }
-        );
-      } else {
-        console.warn("Geolocation is not supported by this browser.");
-        // You can optionally display a message to the user if geolocation is not supported
-        // e.g., this.showModal('info', 'Browser Limitation', 'Geolocation is not supported by your browser.');
+          // Optionally, center the map on user's location
+          this.map.setView(userLatLng, 13);
+        },
+        (error) => {
+          console.warn(`Geolocation error: ${error.message}`);
+          // You can optionally display a message to the user if geolocation fails
+          // e.g., this.showModal('info', 'Location Unavailable', 'Could not get your current location.');
+        }
+      );
+    } else {
+      console.warn("Geolocation is not supported by this browser.");
+      // You can optionally display a message to the user if geolocation is not supported
+      // e.g., this.showModal('info', 'Browser Limitation', 'Geolocation is not supported by your browser.');
+    }
+    // --- END: Geolocation Code ---
+
+    // Add markers for each spot (your existing code for QR spots)
+    this.state.mapSpots.forEach((spot) => {
+      let popupContent = "<strong>QR Spot</strong><br>Unknown Type";
+      let customIcon;
+      const item = this.getItemForSpot(spot);
+
+      if (item) {
+        popupContent = `<strong>${
+          item.name
+        }</strong><br><span class="text-xs">${
+          spot.spotType.charAt(0).toUpperCase() + spot.spotType.slice(1)
+        } Spot</span>`;
       }
-      // --- END: Geolocation Code ---
 
-      // Add markers for each spot (your existing code for QR spots)
-      this.state.mapSpots.forEach((spot) => {
-        let popupContent = "<strong>QR Spot</strong><br>Unknown Type";
-        let customIcon;
-        const item = this.getItemForSpot(spot);
-
-        if (item) {
-          popupContent = `<strong>${
-            item.name
-          }</strong><br><span class="text-xs">${
-            spot.spotType.charAt(0).toUpperCase() + spot.spotType.slice(1)
-          } Spot</span>`;
-        }
-
-        switch (spot.spotType) {
-          case "event":
-            customIcon = this.eventIcon;
-            break;
-          case "reward": // Changed from 'rewards' to 'reward' to match your data structure
-            customIcon = this.rewardIcon;
-            break;
-          case "badge":
-            const badge = this.getItemForSpot(spot);
-            if (badge && badge.icon.startsWith("http")) {
-              customIcon = L.icon({
-                iconUrl: badge.icon,
-                iconSize: [38, 38],
-                iconAnchor: [19, 38],
-                popupAnchor: [0, -42],
-              });
-            } else {
-              // Fallback icon if the badge icon is not a URL
-              customIcon = L.icon({
-                iconUrl:
-                  "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWh6MWo0b2F3azc3NXBsM2xzMDhycXdoNTZ5YXRtNHR3eHhydzltNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/AD8kBgyVlNBcoxuVSm/giphy.gif", // Default badge icon
-                iconSize: [38, 38],
-                iconAnchor: [19, 38],
-                popupAnchor: [0, -42],
-              });
-            }
-            break;
-          default:
-            // A default icon for any other spot types
+      switch (spot.spotType) {
+        case "event":
+          customIcon = this.eventIcon;
+          break;
+        case "reward": // Changed from 'rewards' to 'reward' to match your data structure
+          customIcon = this.rewardIcon;
+          break;
+        case "badge":
+          const badge = this.getItemForSpot(spot);
+          if (badge && badge.icon.startsWith("http")) {
             customIcon = L.icon({
-              iconUrl: "https://img.icons8.com/ios-filled/50/000000/marker.png",
-              iconSize: [30, 30],
-              iconAnchor: [15, 30],
-              popupAnchor: [0, -34],
+              iconUrl: badge.icon,
+              iconSize: [38, 38],
+              iconAnchor: [19, 38],
+              popupAnchor: [0, -42],
             });
-        }
+          } else {
+            // Fallback icon if the badge icon is not a URL
+            customIcon = L.icon({
+              iconUrl:
+                "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWh6MWo0b2F3azc3NXBsM2xzMDhycXdoNTZ5YXRtNHR3eHhydzltNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/AD8kBgyVlNBcoxuVSm/giphy.gif", // Default badge icon
+              iconSize: [38, 38],
+              iconAnchor: [19, 38],
+              popupAnchor: [0, -42],
+            });
+          }
+          break;
+        default:
+          // A default icon for any other spot types
+          customIcon = L.icon({
+            iconUrl: "https://img.icons8.com/ios-filled/50/000000/marker.png",
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -34],
+          });
+      }
 
-        L.marker([spot.lat, spot.lng], {
-          icon: customIcon,
-        })
-          .addTo(this.map) // Use this.map here
-          .bindPopup(popupContent);
-      });
+      L.marker([spot.lat, spot.lng], {
+        icon: customIcon,
+      })
+        .addTo(this.map) // Use this.map here
+        .bindPopup(popupContent);
+    });
 
-      // Invalidate map size after a short delay to ensure it renders correctly
-      setTimeout(() => {
-        if (this.map) {
-          this.map.invalidateSize();
-        }
-      }, 100);
-    };
+    // Invalidate map size after a short delay to ensure it renders correctly
+    setTimeout(() => {
+      if (this.map) {
+        this.map.invalidateSize();
+      }
+    }, 100);
+  };
 
   this.getItemForSpot = (spot) => {
     if (spot.spotType === "event") {
@@ -1774,146 +2308,144 @@ const App = function () {
     return null;
   };
 
-   this.initAdminMap = () => {
-     const mapElement = document.getElementById("admin-map");
-     if (!mapElement || mapElement._leaflet_id) return;
+  this.initAdminMap = () => {
+    const mapElement = document.getElementById("admin-map");
+    if (!mapElement || mapElement._leaflet_id) return;
 
-     // Store the map instance
-     this.map = L.map("admin-map").setView([11.5833, 124.4333], 13); // Store map in this.map
-     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(
-       this.map
-     ); // Use this.map
-     // Show user's current location on the map
-     if (navigator.geolocation) {
-       navigator.geolocation.getCurrentPosition(
-         (position) => {
-           const userLatLng = [
-             position.coords.latitude,
-             position.coords.longitude,
-           ];
+    // Store the map instance
+    this.map = L.map("admin-map").setView([11.5833, 124.4333], 13); // Store map in this.map
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(
+      this.map
+    ); // Use this.map
+    // Show user's current location on the map
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLatLng = [
+            position.coords.latitude,
+            position.coords.longitude,
+          ];
 
-           // Add a marker for user's location
-           const userMarker = L.marker(userLatLng, {
-             icon: L.icon({
-               iconUrl:
-                 "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExa292bXkzb29saGRiNXp4OHhnbmI5cjVncndxZTVnbWRiM2RtMDQ1NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/NR7gG7kTotB0SbZHx2/giphy.gif", // example icon URL, you can replace with your own
-               iconSize: [25, 41],
-               iconAnchor: [12, 41],
-               popupAnchor: [1, -36],
-             }),
-             title: "Your Location",
-           }).addTo(this.map);
+          // Add a marker for user's location
+          const userMarker = L.marker(userLatLng, {
+            icon: L.icon({
+              iconUrl:
+                "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExa292bXkzb29saGRiNXp4OHhnbmI5cjVncndxZTVnbWRiM2RtMDQ1NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/NR7gG7kTotB0SbZHx2/giphy.gif", // example icon URL, you can replace with your own
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -36],
+            }),
+            title: "Your Location",
+          }).addTo(this.map);
 
-           userMarker.bindPopup("You are here").openPopup();
+          userMarker.bindPopup("You are here").openPopup();
 
-           // Optionally, center the map on user's location
-           this.map.setView(userLatLng, 13);
-         },
-         (error) => {
-           console.warn(`Geolocation error: ${error.message}`);
-           // You can optionally handle errors here
-         }
-       );
-     } else {
-       console.warn("Geolocation is not supported by this browser.");
-     }
+          // Optionally, center the map on user's location
+          this.map.setView(userLatLng, 13);
+        },
+        (error) => {
+          console.warn(`Geolocation error: ${error.message}`);
+          // You can optionally handle errors here
+        }
+      );
+    } else {
+      console.warn("Geolocation is not supported by this browser.");
+    }
 
-     let newSpotMarker;
-     this.map.on("click", (e) => {
-       // Use this.map
-       const { lat, lng } = e.latlng;
+    let newSpotMarker;
+    this.map.on("click", (e) => {
+      // Use this.map
+      const { lat, lng } = e.latlng;
 
-       // Determine which form is active (add or edit)
-       const addForm = document.getElementById("add-spot-form");
-       const editForm = document.getElementById("edit-spot-form");
+      // Determine which form is active (add or edit)
+      const addForm = document.getElementById("add-spot-form");
+      const editForm = document.getElementById("edit-spot-form");
 
-       if (addForm.style.display !== "none") {
-         // Add form is visible
-         document.querySelector('#add-spot-form input[name="spotLat"]').value =
-           lat;
-         document.querySelector('#add-spot-form input[name="spotLng"]').value =
-           lng;
-         document.getElementById("coords-display").textContent = `${lat.toFixed(
-           6
-         )}, ${lng.toFixed(6)}`;
+      if (addForm.style.display !== "none") {
+        // Add form is visible
+        document.querySelector('#add-spot-form input[name="spotLat"]').value =
+          lat;
+        document.querySelector('#add-spot-form input[name="spotLng"]').value =
+          lng;
+        document.getElementById("coords-display").textContent = `${lat.toFixed(
+          6
+        )}, ${lng.toFixed(6)}`;
 
-         if (newSpotMarker) {
-           newSpotMarker.setLatLng(e.latlng);
-         } else {
-           newSpotMarker = L.marker(e.latlng, { draggable: true }).addTo(
-             this.map
-           );
-           newSpotMarker.on("dragend", (event) => {
-             const marker = event.target;
-             const position = marker.getLatLng();
-             document.querySelector(
-               '#add-spot-form input[name="spotLat"]'
-             ).value = position.lat;
-             document.querySelector(
-               '#add-spot-form input[name="spotLng"]'
-             ).value = position.lng;
-             document.getElementById(
-               "coords-display"
-             ).textContent = `${position.lat.toFixed(
-               6
-             )}, ${position.lng.toFixed(6)}`;
-           });
-         }
-       } else if (editForm.style.display !== "none") {
-         // Edit form is visible
-         document.querySelector(
-           '#edit-spot-form input[name="editSpotLat"]'
-         ).value = lat;
-         document.querySelector(
-           '#edit-spot-form input[name="editSpotLng"]'
-         ).value = lng;
-         document.getElementById(
-           "edit-coords-display"
-         ).textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        if (newSpotMarker) {
+          newSpotMarker.setLatLng(e.latlng);
+        } else {
+          newSpotMarker = L.marker(e.latlng, { draggable: true }).addTo(
+            this.map
+          );
+          newSpotMarker.on("dragend", (event) => {
+            const marker = event.target;
+            const position = marker.getLatLng();
+            document.querySelector(
+              '#add-spot-form input[name="spotLat"]'
+            ).value = position.lat;
+            document.querySelector(
+              '#add-spot-form input[name="spotLng"]'
+            ).value = position.lng;
+            document.getElementById(
+              "coords-display"
+            ).textContent = `${position.lat.toFixed(6)}, ${position.lng.toFixed(
+              6
+            )}`;
+          });
+        }
+      } else if (editForm.style.display !== "none") {
+        // Edit form is visible
+        document.querySelector(
+          '#edit-spot-form input[name="editSpotLat"]'
+        ).value = lat;
+        document.querySelector(
+          '#edit-spot-form input[name="editSpotLng"]'
+        ).value = lng;
+        document.getElementById(
+          "edit-coords-display"
+        ).textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 
-         if (this.currentEditMarker) {
-           this.currentEditMarker.setLatLng(e.latlng);
-         } else {
-           this.currentEditMarker = L.marker(e.latlng, {
-             draggable: true,
-           }).addTo(this.map);
-           this.currentEditMarker.on("dragend", (event) => {
-             const marker = event.target;
-             const position = marker.getLatLng();
-             document.querySelector(
-               '#edit-spot-form input[name="editSpotLat"]'
-             ).value = position.lat;
-             document.querySelector(
-               '#edit-spot-form input[name="editSpotLng"]'
-             ).value = position.lng;
-             document.getElementById(
-               "edit-coords-display"
-             ).textContent = `${position.lat.toFixed(
-               6
-             )}, ${position.lng.toFixed(6)}`;
-           });
-         }
-       }
-     });
+        if (this.currentEditMarker) {
+          this.currentEditMarker.setLatLng(e.latlng);
+        } else {
+          this.currentEditMarker = L.marker(e.latlng, {
+            draggable: true,
+          }).addTo(this.map);
+          this.currentEditMarker.on("dragend", (event) => {
+            const marker = event.target;
+            const position = marker.getLatLng();
+            document.querySelector(
+              '#edit-spot-form input[name="editSpotLat"]'
+            ).value = position.lat;
+            document.querySelector(
+              '#edit-spot-form input[name="editSpotLng"]'
+            ).value = position.lng;
+            document.getElementById(
+              "edit-coords-display"
+            ).textContent = `${position.lat.toFixed(6)}, ${position.lng.toFixed(
+              6
+            )}`;
+          });
+        }
+      }
+    });
 
-     // Also display existing spots
-     this.state.mapSpots.forEach((spot) => {
-       const marker = L.marker([spot.lat, spot.lng]).addTo(this.map); // Use this.map
-       marker.on("click", () => {
-         this.editSpot(spot.id);
-       });
-     });
+    // Also display existing spots
+    this.state.mapSpots.forEach((spot) => {
+      const marker = L.marker([spot.lat, spot.lng]).addTo(this.map); // Use this.map
+      marker.on("click", () => {
+        this.editSpot(spot.id);
+      });
+    });
 
-     // Invalidate map size after a short delay to ensure it renders correctly
-     setTimeout(() => {
-       if (this.map) {
-         this.map.invalidateSize();
-       }
-     }, 100);
-   };
+    // Invalidate map size after a short delay to ensure it renders correctly
+    setTimeout(() => {
+      if (this.map) {
+        this.map.invalidateSize();
+      }
+    }, 100);
+  };
 
-
-  
   this.populateAdminSpotForm = (isEditMode = false, currentLinkedId = null) => {
     const typeSelect = document.querySelector(
       isEditMode
@@ -1956,7 +2488,6 @@ const App = function () {
     itemSelect.innerHTML = options;
   };
 
-
   this.populateSpotsList = () => {
     const listElement = document.getElementById("spots-list");
     if (!listElement) return;
@@ -1992,7 +2523,6 @@ const App = function () {
       .join("");
     lucide.createIcons();
   };
-
 
   this.handleSaveSpot = async (e) => {
     e.preventDefault();
@@ -2032,45 +2562,42 @@ const App = function () {
     }
   };
 
-    
+  this.handleUpdateSpot = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const spotId = form.elements.editSpotId.value;
+    const lat = form.elements.editSpotLat.value;
+    const lng = form.elements.editSpotLng.value;
+    const spotType = form.elements.editSpotType.value;
+    const linkedId = form.elements.editLinkedId.value;
+    const description = form.elements.editSpotDescription.value;
 
-    this.handleUpdateSpot = async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const spotId = form.elements.editSpotId.value;
-      const lat = form.elements.editSpotLat.value;
-      const lng = form.elements.editSpotLng.value;
-      const spotType = form.elements.editSpotType.value;
-      const linkedId = form.elements.editLinkedId.value;
-      const description = form.elements.editSpotDescription.value;
+    if (!lat || !lng) {
+      return this.showModal(
+        "error",
+        "Location Missing",
+        "Coordinates are missing for the spot."
+      );
+    }
 
-      if (!lat || !lng) {
-        return this.showModal(
-          "error",
-          "Location Missing",
-          "Coordinates are missing for the spot."
-        );
-      }
-
-      try {
-        await updateDoc(doc(this.fb.db, this.paths.mapSpots, spotId), {
-          lat: parseFloat(lat),
-          lng: parseFloat(lng),
-          spotType,
-          linkedId,
-          description,
-        });
-        this.showModal(
-          "success",
-          "Spot Updated!",
-          "The QR spot has been updated."
-        );
-        this.cancelEditSpot(); // Hide edit form and show add form
-      } catch (error) {
-        this.showModal("error", "Update Failed", error.message);
-      }
-    };
-
+    try {
+      await updateDoc(doc(this.fb.db, this.paths.mapSpots, spotId), {
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        spotType,
+        linkedId,
+        description,
+      });
+      this.showModal(
+        "success",
+        "Spot Updated!",
+        "The QR spot has been updated."
+      );
+      this.cancelEditSpot(); // Hide edit form and show add form
+    } catch (error) {
+      this.showModal("error", "Update Failed", error.message);
+    }
+  };
 
   this.handleDeleteSpot = async (spotId) => {
     this.showModal(
@@ -2097,79 +2624,72 @@ const App = function () {
     );
   };
 
-    
-    this.editSpot = (spotId) => {
-      const spot = this.state.mapSpots.find((s) => s.id === spotId);
-      if (!spot) return;
+  this.editSpot = (spotId) => {
+    const spot = this.state.mapSpots.find((s) => s.id === spotId);
+    if (!spot) return;
 
-      const editForm = document.getElementById("edit-spot-form");
-      const addForm = document.getElementById("add-spot-form");
-      const editTitle = document.getElementById("edit-spot-title");
-      const addTitle = editForm.previousElementSibling.previousElementSibling; // "Add New Spot" title
+    const editForm = document.getElementById("edit-spot-form");
+    const addForm = document.getElementById("add-spot-form");
+    const editTitle = document.getElementById("edit-spot-title");
+    const addTitle = editForm.previousElementSibling.previousElementSibling; // "Add New Spot" title
 
-      // Hide add form, show edit form
-      addForm.style.display = "none";
-      addTitle.style.display = "none";
-      editForm.style.display = "block";
-      editTitle.style.display = "block";
+    // Hide add form, show edit form
+    addForm.style.display = "none";
+    addTitle.style.display = "none";
+    editForm.style.display = "block";
+    editTitle.style.display = "block";
 
-      // Populate edit form fields
-      editForm.elements.editSpotId.value = spot.id;
-      editForm.elements.editSpotLat.value = spot.lat;
-      editForm.elements.editSpotLng.value = spot.lng;
-      document.getElementById(
-        "edit-coords-display"
-      ).textContent = `${spot.lat.toFixed(6)}, ${spot.lng.toFixed(6)}`;
-      editForm.elements.editSpotType.value = spot.spotType;
-      editForm.elements.editSpotDescription.value = spot.description || "";
+    // Populate edit form fields
+    editForm.elements.editSpotId.value = spot.id;
+    editForm.elements.editSpotLat.value = spot.lat;
+    editForm.elements.editSpotLng.value = spot.lng;
+    document.getElementById(
+      "edit-coords-display"
+    ).textContent = `${spot.lat.toFixed(6)}, ${spot.lng.toFixed(6)}`;
+    editForm.elements.editSpotType.value = spot.spotType;
+    editForm.elements.editSpotDescription.value = spot.description || "";
 
-      // Populate linked item dropdown for edit form
-      this.populateAdminSpotForm(true, spot.linkedId); // Pass true for edit mode, and the current linkedId
+    // Populate linked item dropdown for edit form
+    this.populateAdminSpotForm(true, spot.linkedId); // Pass true for edit mode, and the current linkedId
 
-      // Update map marker (optional, but good for UX)
-      // You might need to store the map instance in this.map in initAdminMap
-      // if (this.map) {
-      //     if (this.currentEditMarker) {
-      //         this.map.removeLayer(this.currentEditMarker);
-      //     }
-      //     this.currentEditMarker = L.marker([spot.lat, spot.lng], { draggable: true }).addTo(this.map);
-      //     this.currentEditMarker.on('dragend', (event) => {
-      //         const marker = event.target;
-      //         const position = marker.getLatLng();
-      //         editForm.elements.editSpotLat.value = position.lat;
-      //         editForm.elements.editSpotLng.value = position.lng;
-      //         document.getElementById('edit-coords-display').textContent = `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`;
-      //     });
-      // }
-    };
+    // Update map marker (optional, but good for UX)
+    // You might need to store the map instance in this.map in initAdminMap
+    // if (this.map) {
+    //     if (this.currentEditMarker) {
+    //         this.map.removeLayer(this.currentEditMarker);
+    //     }
+    //     this.currentEditMarker = L.marker([spot.lat, spot.lng], { draggable: true }).addTo(this.map);
+    //     this.currentEditMarker.on('dragend', (event) => {
+    //         const marker = event.target;
+    //         const position = marker.getLatLng();
+    //         editForm.elements.editSpotLat.value = position.lat;
+    //         editForm.elements.editSpotLng.value = position.lng;
+    //         document.getElementById('edit-coords-display').textContent = `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`;
+    //     });
+    // }
+  };
 
-    this.cancelEditSpot = () => {
-      const editForm = document.getElementById("edit-spot-form");
-      const addForm = document.getElementById("add-spot-form");
-      const editTitle = document.getElementById("edit-spot-title");
-      const addTitle = editForm.previousElementSibling.previousElementSibling; // "Add New Spot" title
+  this.cancelEditSpot = () => {
+    const editForm = document.getElementById("edit-spot-form");
+    const addForm = document.getElementById("add-spot-form");
+    const editTitle = document.getElementById("edit-spot-title");
+    const addTitle = editForm.previousElementSibling.previousElementSibling; // "Add New Spot" title
 
-      // Hide edit form, show add form
-      editForm.style.display = "none";
-      editTitle.style.display = "none";
-      addForm.style.display = "block";
-      addTitle.style.display = "block";
+    // Hide edit form, show add form
+    editForm.style.display = "none";
+    editTitle.style.display = "none";
+    addForm.style.display = "block";
+    addTitle.style.display = "block";
 
-      // Clear edit form fields
-      editForm.reset();
-      document.getElementById("edit-coords-display").textContent = "";
+    // Clear edit form fields
+    editForm.reset();
+    document.getElementById("edit-coords-display").textContent = "";
 
-      // if (this.currentEditMarker && this.map) {
-      //     this.map.removeLayer(this.currentEditMarker);
-      //     this.currentEditMarker = null;
-      // }
-    };
-
-
-
-
-
-
+    // if (this.currentEditMarker && this.map) {
+    //     this.map.removeLayer(this.currentEditMarker);
+    //     this.currentEditMarker = null;
+    // }
+  };
 
   this.openAdminMapPanel = () => {
     const content = `
@@ -2339,7 +2859,6 @@ const App = function () {
       .getElementById("edit-spot-form")
       .addEventListener("submit", this.handleUpdateSpot.bind(this)); // New handler
   };
-
 
   // --- LOGGING ---
   this.logAction = async (action, details, pointsChange = null) => {
