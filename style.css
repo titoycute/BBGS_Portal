@@ -8,22 +8,45 @@ body {
 
 #admin-map {
   width: 100%;
-  height: 60vh; /* Use 60% of the viewport height for responsiveness */
+  height: 70vh; /* Use 60% of the viewport height for responsiveness */
   min-height: 300px; /* Ensure it's never smaller than 300px */
   position: relative; /* Helps with internal map element positioning */
   z-index: 1; /* Prevents it from being hidden behind other elements */
   
 }
 
-setTimeout(() => {
-    if (this.adminMap) {
-        this.adminMap.invalidateSize();
-    }
-}, 100);
 
 #app {
   position: relative;
   z-index: 1;
+}
+
+#messages-container {
+  height: 60vh; /* 70% of the viewport height */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.floating-back-button {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 50; /* Ensure it's above other content */
+  background-color: rgba(41, 47, 61, 0.8); /* Semi-transparent background */
+  backdrop-filter: blur(5px); /* Frosted glass effect */
+  color: white;
+  width: 2.5rem; /* 40px */
+  height: 2.5rem; /* 40px */
+  border-radius: 9999px; /* Fully rounded */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.floating-back-button:hover {
+  background-color: rgba(55, 65, 81, 0.9);
 }
 
 .pride-gradient-bg {
@@ -93,6 +116,9 @@ body.theme-default #app {
   background-size: cover;
   background-position: center;
 }
+
+body.theme-default .chat-bubble-sender { background-color: #4f46e5 !important; }
+body.theme-default .chat-send-button { background-color: #4f46e5 !important; }
 
 body.theme-default .bg-gray-700 {
   background-color: #37415198;
@@ -475,3 +501,55 @@ body.theme-pink .border-pink-500,
 body.theme-pink .border-purple-500 {
   border-color: #f472b6 !important;
 }
+
+/* --- UNIVERSAL CHAT THEME STYLES --- */
+
+/* This sets the default colors if no theme is active */
+
+/* --- DEFINITIVE CHAT THEME STYLES --- */
+
+/* 1. Default Bubble Colors (Fallback) */
+.chat-bubble-sender {
+  background-color: #d12a6d; /* Default Pink */
+  color: white;
+}
+.chat-bubble-receiver {
+  background-color: #374151; /* Default Gray */
+  color: white;
+}
+.chat-send-button {
+    background-color: #d12a6d; /* Default Pink */
+}
+
+
+/* 2. Theme-Specific Overrides */
+/* This section applies the correct colors based on the body class */
+
+/* Default Theme */
+
+
+/* White Golden Theme */
+body.theme-light .chat-bubble-sender { background-color: #ca8a04 !important; }
+body.theme-light .chat-bubble-receiver { background-color: #94a3b8 !important; color: #1e293b !important; }
+body.theme-light .chat-send-button { background-color: #ca8a04 !important; }
+
+/* Blue Spectrum Theme */
+body.theme-blue .chat-bubble-sender { background-color: #2563eb !important; }
+body.theme-blue .chat-send-button { background-color: #2563eb !important; }
+
+/* IbidAko Theme */
+body.theme-green .chat-bubble-sender { background-color: #047857 !important; }
+body.theme-green .chat-send-button { background-color: #047857 !important; }
+
+/* Pink Sparkle Theme */
+body.theme-pink-sparkle .chat-bubble-sender { background-color: #db2777 !important; }
+body.theme-pink-sparkle .chat-send-button { background-color: #db2777 !important; }
+
+/* DasigNaval Theme */
+body.theme-rainbow2 .chat-bubble-sender { background-color: #db2777 !important; }
+body.theme-rainbow2 .chat-send-button { background-color: #8a0067 !important; }
+
+/* Digital Theme */
+body.theme-rainbow .chat-bubble-sender { background-color: rgb(36, 36, 36) !important; }
+body.theme-rainbow .chat-bubble-receiver { background-color: #474747 !important; }
+body.theme-rainbow .chat-send-button { background-color: #167ba3 !important; }

@@ -67,6 +67,7 @@ const App = function () {
       month: (currentDate.getMonth() + 1).toString(),
       day: currentDate.getDate().toString(), // Set the default day to the current day
     },
+
     adminEmail: "titoycustodio@bipsu.edu.ph",
     adminActiveTab: "verification",
     adminMemberSearch: "",
@@ -80,31 +81,11 @@ const App = function () {
     listeners: [], // To store unsubscribe functions for snapshots
     html5QrCode: null, // To hold the scanner instance
     calendarDate: new Date(),
+    firstVisibleMessage: null,
+    allMessagesLoaded: false,
   };
 
-  //   // -- CHAT --
-  // this.listenToUserChats = () => {
-  //   if (!this.state.loggedInUser ) return;
 
-  //   const q = query(
-  //     collection(this.fb.db, this.paths.chats),
-  //     where('participants', 'array-contains', this.state.loggedInUser .id),
-  //     orderBy('lastMessageTimestamp', 'desc')
-  //   );
-
-  //   const unsubscribe = onSnapshot(q, (snapshot) => {
-  //     this.state.chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  //     if (this.state.currentPage === 'messages' && !this.state.currentChatId) {
-  //       this.render();
-  //     }
-  //   }, (error) => {
-  //     console.error("Error listening to user chats:", error);
-  //   });
-
-  //   this.state.chatListeners.push(unsubscribe);
-  // };
-
-  // ... existing methods ...
 
   // --- Chat Functionality ---
 
@@ -122,43 +103,93 @@ const App = function () {
     }, 100);
   };
 
-  this.listenToChatMessages = (chatId) => {
-    if (!chatId) return;
+
+ this.listenToChatMessages = (chatId) => {
+   if (!chatId) return;
+
+   this.detachChatListeners();
+
+   // Reset state for the new chat
+   this.state.allMessagesLoaded = false;
+   this.state.firstVisibleMessage = null;
+   this.state.currentChatMessages = [];
+
+   const q = query(
+     collection(this.fb.db, this.paths.messages(chatId)),
+     orderBy("timestamp", "desc"),
+     limit(15)
+   );
+
+   const unsubscribe = onSnapshot(
+     q,
+     (snapshot) => {
+       // **THIS IS THE FIX**: We only assume all messages are loaded
+       // if the number of documents returned is LESS than our limit of 15.
+       // If it returns exactly 15, there might be more.
+       this.state.allMessagesLoaded = snapshot.docs.length < 15;
+
+       if (!snapshot.empty) {
+         // Save the oldest message from this batch as our cursor
+         this.state.firstVisibleMessage =
+           snapshot.docs[snapshot.docs.length - 1];
+       }
+
+       // Reverse the array to display chronologically
+       this.state.currentChatMessages = snapshot.docs
+         .map((doc) => ({ id: doc.id, ...doc.data() }))
+         .reverse();
+
+       // Render the UI and then scroll to the bottom
+       this.render();
+       this.postRender(); // Call postRender to handle scrolling
+     },
+     (error) => console.error("Error listening to messages:", error)
+   );
+
+   this.state.chatListeners.push(unsubscribe);
+ };
+
+  // This is the entire loadMoreMessages function for reference
+  this.loadMoreMessages = async () => {
+    if (!this.state.currentChatId || this.state.allMessagesLoaded) return;
+
+    const container = document.getElementById("messages-container");
+    const oldScrollHeight = container.scrollHeight;
 
     const q = query(
-      collection(this.fb.db, this.paths.messages(chatId)),
-      orderBy("timestamp", "asc")
+      collection(this.fb.db, this.paths.messages(this.state.currentChatId)),
+      orderBy("timestamp", "desc"),
+      startAfter(this.state.firstVisibleMessage),
+      limit(10) // <--- CHANGE THIS LINE
     );
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        this.state.currentChatMessages = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        if (
-          this.state.currentPage === "messages" &&
-          this.state.currentChatId === chatId
-        ) {
-          this.render();
+    const snapshot = await getDocs(q);
 
-          setTimeout(() => {
-            const messagesContainer =
-              document.getElementById("messages-container");
-            if (messagesContainer) {
-              messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-          }, 50);
-        }
-      },
-      (error) => {
-        console.error("Error listening to chat messages:", error);
+    if (!snapshot.empty) {
+      this.state.firstVisibleMessage =
+        snapshot.docs[snapshot.docs.length - 1];
+
+      const olderMessages = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .reverse();
+      this.state.currentChatMessages = [
+        ...olderMessages,
+        ...this.state.currentChatMessages,
+      ];
+
+      if (snapshot.docs.length < 10) { // <--- AND CHANGE THIS LINE
+        this.state.allMessagesLoaded = true;
       }
-    );
-
-    this.state.chatListeners.push(unsubscribe);
+    } else {
+      this.state.allMessagesLoaded = true;
+    }
+    this.render();
+    setTimeout(() => {
+      const newScrollHeight = container.scrollHeight;
+      container.scrollTop = newScrollHeight - oldScrollHeight;
+    }, 10);
   };
+  
 
   this.detachChatListeners = () => {
     this.state.chatListeners.forEach((unsub) => unsub());
@@ -372,43 +403,7 @@ const App = function () {
    this.state.chatListeners.push(unsubscribe);
  };
 
-  // Listens to real-time updates for messages within a specific chat
-  this.listenToChatMessages = (chatId) => {
-    if (!chatId) return;
-
-    const q = query(
-      collection(this.fb.db, this.paths.messages(chatId)),
-      orderBy("timestamp", "asc") // Order messages chronologically
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        this.state.currentChatMessages = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        if (
-          this.state.currentPage === "messages" &&
-          this.state.currentChatId === chatId
-        ) {
-          this.render(); // Re-render active chat view
-          // Scroll to bottom of messages after new messages arrive
-          setTimeout(() => {
-            const messagesContainer =
-              document.getElementById("messages-container");
-            if (messagesContainer) {
-              messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-          }, 50);
-        }
-      },
-      (error) => {
-        console.error("Error listening to chat messages:", error);
-      }
-    );
-    this.state.chatListeners.push(unsubscribe); // Store listener
-  };
+  
 
   // Detaches all chat-related real-time listeners
   this.detachChatListeners = () => {
@@ -489,8 +484,7 @@ const App = function () {
 
   // --- TEMPLATES / VIEWS ---
   this.templates = {
-    // Inside this.templates = { ...
-
+    // REPLACE your existing 'messages' template function with this corrected version
     messages: () => {
       console.log("Rendering messages template");
       console.log("Chats:", this.state.chats);
@@ -553,29 +547,29 @@ const App = function () {
                   if (!chatUser) return "";
 
                   return `
-                <div onclick="app.openChat('${
-                  chat.id
-                }')" class="bg-gray-700 p-3 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-gray-600">
-                  <img src="${
-                    chatUser.profilePic
-                  }" class="w-12 h-12 rounded-full object-cover">
-                  <div class="flex-1">
-                    <p class="font-semibold">${chatUser.firstName} ${
+                  <div onclick="app.openChat('${
+                    chat.id
+                  }')" class="bg-gray-700 p-3 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-gray-600">
+                    <img src="${
+                      chatUser.profilePic
+                    }" class="w-12 h-12 rounded-full object-cover">
+                    <div class="flex-1">
+                      <p class="font-semibold">${chatUser.firstName} ${
                     chatUser.lastName
                   }</p>
-                    <p class="text-sm text-gray-400 truncate">${
-                      chat.lastMessage || "Start a conversation..."
-                    }</p>
+                      <p class="text-sm text-gray-400 truncate">${
+                        chat.lastMessage || "Start a conversation..."
+                      }</p>
+                    </div>
+                    ${
+                      chat.lastMessageTimestamp
+                        ? `<p class="text-xs text-gray-500">${this.formatTimestamp(
+                            chat.lastMessageTimestamp
+                          )}</p>`
+                        : ""
+                    }
                   </div>
-                  ${
-                    chat.lastMessageTimestamp
-                      ? `<p class="text-xs text-gray-500">${this.formatTimestamp(
-                          chat.lastMessageTimestamp
-                        )}</p>`
-                      : ""
-                  }
-                </div>
-              `;
+                `;
                 })
                 .join("")
             : '<p class="text-center text-gray-400 py-8">No conversations yet. Start one from the directory!</p>'
@@ -587,49 +581,54 @@ const App = function () {
       } flex flex-col h-full">
         <div id="messages-container" class="flex-grow overflow-y-auto no-scrollbar p-2 space-y-3 bg-gray-800 rounded-lg mb-3">
           ${
-            this.state.currentChatMessages.length > 0
-              ? this.state.currentChatMessages
-                  .map((msg) => {
-                    const isSender = msg.senderId === user.id;
-                    const senderUser = this.state.users.find(
-                      (u) => u.id === msg.senderId
-                    );
-                    return `
-                <div class="flex ${
-                  isSender ? "justify-end" : "justify-start"
-                } items-end space-x-2">
-                  ${
-                    !isSender && senderUser
-                      ? `<img src="${senderUser.profilePic}" class="w-8 h-8 rounded-full object-cover">`
-                      : ""
-                  }
-                  <div class="max-w-[70%] p-3 rounded-xl ${
-                    isSender
-                      ? "bg-pink-500 text-white rounded-br-none"
-                      : "bg-gray-700 text-white rounded-bl-none"
-                  }">
-                    <p class="text-sm">${msg.text}</p>
-                    <p class="text-xs text-gray-300 text-right mt-1">${this.formatTimestamp(
-                      msg.timestamp,
-                      true
-                    )}</p>
-                  </div>
-                  ${
-                    isSender
-                      ? `<img src="${user.profilePic}" class="w-8 h-8 rounded-full object-cover">`
-                      : ""
-                  }
-                </div>
-              `;
-                  })
-                  .join("")
-              : '<p class="text-center text-gray-400 py-8">Say hello!</p>'
+            !this.state.allMessagesLoaded
+              ? `<button onclick="app.loadMoreMessages()" class="text-center w-full theme-text-accent mb-4">View previous conversation</button>`
+              : ""
           }
+   ${
+     this.state.currentChatMessages.length > 0
+       ? this.state.currentChatMessages
+           .map((msg) => {
+             const isSender = msg.senderId === user.id;
+             const senderUser = this.state.users.find(
+               (u) => u.id === msg.senderId
+             );
+             return `
+                  <div class="flex ${
+                    isSender ? "justify-end" : "justify-start"
+                  } items-end space-x-2">
+                    ${
+                      !isSender && senderUser
+                        ? `<img src="${senderUser.profilePic}" class="w-8 h-8 rounded-full object-cover">`
+                        : ""
+                    }
+                    <div class="max-w-[70%] p-3 rounded-xl ${
+                      isSender
+                        ? "chat-bubble-sender rounded-br-none" // This class should be here
+                        : "chat-bubble-receiver rounded-bl-none" // This class should be here
+                    }">
+  <p class="text-sm">${msg.text}</p>
+  <p class="text-xs text-gray-300 text-right mt-1">${this.formatTimestamp(
+    msg.timestamp,
+    true
+  )}</p>
+</div>
+                    ${
+                      isSender
+                        ? `<img src="${user.profilePic}" class="w-8 h-8 rounded-full object-cover">`
+                        : ""
+                    }
+                  </div>
+                `;
+           })
+           .join("")
+       : '<p class="text-center text-gray-400 py-8">Say hello!</p>'
+   }
         </div>
 
-        <form id="chat-input-form" class="flex space-x-2 p-2 bg-gray-900 rounded-lg">
+        <form id="chat-input-form" class="flex space-x-2 p-2 bg-gray-900 rounded-lg" onsubmit="app.sendMessage(event)">
           <input type="text" name="messageText" placeholder="Type a message..." class="flex-grow bg-gray-700 rounded-lg p-3 outline-none text-white" autocomplete="off" required>
-          <button type="submit" class="pride-gradient-bg text-white p-3 rounded-lg">
+          <button type="submit" class="chat-send-button text-white p-3 rounded-lg">
             <i data-lucide="send"></i>
           </button>
         </form>
@@ -637,7 +636,6 @@ const App = function () {
     </div>
   `;
     },
-    // ... rest of templates ...
 
     auth: () => `
             <div class="relative h-full">
@@ -2031,18 +2029,49 @@ const App = function () {
         window.Alpine.initializeComponent(el)
       );
     }
+
+    
+
+    
     switch (this.state.currentPage) {
+      // case "messages":
+      //   if (this.state.currentChatId) {
+      //     const chatInputForm = document.getElementById("chat-input-form");
+      //     if (chatInputForm) {
+      //       chatInputForm.addEventListener(
+      //         "submit",
+      //         this.sendMessage.bind(this)
+      //       );
+      //     }
+      //   }
+      //   break;
       case "messages":
+        // Find the container for messages
+        const messagesContainer = document.getElementById("messages-container");
+
+        if (messagesContainer) {
+          // **THIS IS THE FIX**: Set the scroll position to the very bottom
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+          
+        }
+       
+      
+        // Note: It's often better to use onsubmit="app.sendMessage(event)" in your HTML template
+        // rather than adding this listener here, to avoid attaching it multiple times.
+        // If your form in the render function already has that, you can remove the code below.
+      
         if (this.state.currentChatId) {
-          const chatInputForm = document.getElementById("chat-input-form");
+          const chatInputForm = document.getElementById("chat-input-form"); // Ensure your form has this ID
           if (chatInputForm) {
-            chatInputForm.addEventListener(
-              "submit",
-              this.sendMessage.bind(this)
-            );
+            chatInputForm.onsubmit = (e) => {
+              e.preventDefault();
+              this.sendMessage(e);
+            };
           }
         }
         break;
+
       case "dashboard":
         if (this.state.loggedInUser.isValidated)
           this.generateQRCode(
