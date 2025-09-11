@@ -14,6 +14,14 @@ import {
   signInWithCustomToken,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
+  getDatabase,
+  ref,
+  onValue,
+  set,
+  onDisconnect,
+  serverTimestamp, // RTDB serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";   
+import {
   getFirestore,
   doc,
   getDoc,
@@ -35,7 +43,10 @@ import {
   limit,
   startAfter,
   documentId,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  serverTimestamp as firestoreServerTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";           
+               
+ 
 
 // --- Main Application Logic ---
 
@@ -85,8 +96,6 @@ const App = function () {
     allMessagesLoaded: false,
   };
 
-
-
   // --- Chat Functionality ---
 
   this.openChat = (chatId) => {
@@ -103,51 +112,77 @@ const App = function () {
     }, 100);
   };
 
+   this.listenToUsers = () => {
+     const usersCollectionRef = collection(this.fb.db, this.paths.users);
+     const q = query(usersCollectionRef);
 
- this.listenToChatMessages = (chatId) => {
-   if (!chatId) return;
+     const unsubscribe = onSnapshot(
+       q,
+       (snapshot) => {
+         // Update the local state with the latest user data
+         this.state.users = snapshot.docs.map((doc) => ({
+           id: doc.id,
+           ...doc.data(),
+         }));
 
-   this.detachChatListeners();
-
-   // Reset state for the new chat
-   this.state.allMessagesLoaded = false;
-   this.state.firstVisibleMessage = null;
-   this.state.currentChatMessages = [];
-
-   const q = query(
-     collection(this.fb.db, this.paths.messages(chatId)),
-     orderBy("timestamp", "desc"),
-     limit(15)
-   );
-
-   const unsubscribe = onSnapshot(
-     q,
-     (snapshot) => {
-       // **THIS IS THE FIX**: We only assume all messages are loaded
-       // if the number of documents returned is LESS than our limit of 15.
-       // If it returns exactly 15, there might be more.
-       this.state.allMessagesLoaded = snapshot.docs.length < 15;
-
-       if (!snapshot.empty) {
-         // Save the oldest message from this batch as our cursor
-         this.state.firstVisibleMessage =
-           snapshot.docs[snapshot.docs.length - 1];
+         // Re-render the chat list and active chat views to show updated status
+         if (this.state.currentPage === "messages") {
+           this.render();
+         }
+       },
+       (error) => {
+         console.error("Error listening to users:", error);
        }
+     );
 
-       // Reverse the array to display chronologically
-       this.state.currentChatMessages = snapshot.docs
-         .map((doc) => ({ id: doc.id, ...doc.data() }))
-         .reverse();
+     // Save the unsubscribe function to the general listeners array
+     this.state.listeners.push(unsubscribe);
+   };
 
-       // Render the UI and then scroll to the bottom
-       this.render();
-       this.postRender(); // Call postRender to handle scrolling
-     },
-     (error) => console.error("Error listening to messages:", error)
-   );
+  this.listenToChatMessages = (chatId) => {
+    if (!chatId) return;
 
-   this.state.chatListeners.push(unsubscribe);
- };
+    this.detachChatListeners();
+
+    // Reset state for the new chat
+    this.state.allMessagesLoaded = false;
+    this.state.firstVisibleMessage = null;
+    this.state.currentChatMessages = [];
+
+    const q = query(
+      collection(this.fb.db, this.paths.messages(chatId)),
+      orderBy("timestamp", "desc"),
+      limit(15)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        // **THIS IS THE FIX**: We only assume all messages are loaded
+        // if the number of documents returned is LESS than our limit of 15.
+        // If it returns exactly 15, there might be more.
+        this.state.allMessagesLoaded = snapshot.docs.length < 15;
+
+        if (!snapshot.empty) {
+          // Save the oldest message from this batch as our cursor
+          this.state.firstVisibleMessage =
+            snapshot.docs[snapshot.docs.length - 1];
+        }
+
+        // Reverse the array to display chronologically
+        this.state.currentChatMessages = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .reverse();
+
+        // Render the UI and then scroll to the bottom
+        this.render();
+        this.postRender(); // Call postRender to handle scrolling
+      },
+      (error) => console.error("Error listening to messages:", error)
+    );
+
+    this.state.chatListeners.push(unsubscribe);
+  };
 
   // This is the entire loadMoreMessages function for reference
   this.loadMoreMessages = async () => {
@@ -166,8 +201,7 @@ const App = function () {
     const snapshot = await getDocs(q);
 
     if (!snapshot.empty) {
-      this.state.firstVisibleMessage =
-        snapshot.docs[snapshot.docs.length - 1];
+      this.state.firstVisibleMessage = snapshot.docs[snapshot.docs.length - 1];
 
       const olderMessages = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
@@ -177,7 +211,8 @@ const App = function () {
         ...this.state.currentChatMessages,
       ];
 
-      if (snapshot.docs.length < 10) { // <--- AND CHANGE THIS LINE
+      if (snapshot.docs.length < 10) {
+        // <--- AND CHANGE THIS LINE
         this.state.allMessagesLoaded = true;
       }
     } else {
@@ -189,7 +224,6 @@ const App = function () {
       container.scrollTop = newScrollHeight - oldScrollHeight;
     }, 10);
   };
-  
 
   this.detachChatListeners = () => {
     this.state.chatListeners.forEach((unsub) => unsub());
@@ -259,6 +293,36 @@ const App = function () {
       );
       this.render(); // Re-render to show the message has been removed.
     }
+  };
+//UNSEND MESSAGE//
+  this.unsendMessage = (chatId, messageId) => {
+    if (!chatId || !messageId) return;
+
+    this.showModal(
+      "confirm",
+      "Unsend Message?",
+      "This will permanently delete the message. This action cannot be undone.",
+      async () => {
+        try {
+          const messageRef = doc(
+            this.fb.db,
+            this.paths.messages(chatId),
+            messageId
+          );
+          await updateDoc(messageRef, {
+      isRemoved: true,
+      text: "This message was removed."
+    });
+
+          // NOTE: The real-time listener will automatically update the UI.
+          // For a more advanced implementation, you could update the `lastMessage`
+          // on the parent chat document if this was the last message.
+        } catch (error) {
+          console.error("Error unsending message:", error);
+          this.showModal("error", "Error", "Could not unsend the message.");
+        }
+      }
+    );
   };
 
   // Initiates a chat with a specific user from the directory
@@ -370,40 +434,41 @@ const App = function () {
 
   // Listens to real-time updates for the current user's chats list
 
- this.listenToUserChats = () => {
-   if (!this.state.loggedInUser) {
-     console.log("No logged in user, skipping chat listener");
-     return;
-   }
+  this.listenToUserChats = () => {
+    if (!this.state.loggedInUser) {
+      console.log("No logged in user, skipping chat listener");
+      return;
+    }
 
-   // The .orderBy clause has been removed from this query to prevent the indexing error.
-   const q = query(
-     collection(this.fb.db, this.paths.chats),
-     where("participants", "array-contains", this.state.loggedInUser.id)
-   );
+    // The .orderBy clause has been removed from this query to prevent the indexing error.
+    const q = query(
+      collection(this.fb.db, this.paths.chats),
+      where("participants", "array-contains", this.state.loggedInUser.id)
+    );
 
-   const unsubscribe = onSnapshot(
-     q,
-     (snapshot) => {
-       console.log("Chats snapshot received:", snapshot.docs.length);
-       this.state.chats = snapshot.docs.map((doc) => ({
-         id: doc.id,
-         ...doc.data(),
-       }));
-       console.log("Chats updated:", this.state.chats);
-       if (this.state.currentPage === "messages" && !this.state.currentChatId) {
-         this.render();
-       }
-     },
-     (error) => {
-       console.error("Error listening to user chats:", error);
-     }
-   );
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        console.log("Chats snapshot received:", snapshot.docs.length);
+        this.state.chats = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        console.log("Chats updated:", this.state.chats);
+        if (
+          this.state.currentPage === "messages" &&
+          !this.state.currentChatId
+        ) {
+          this.render();
+        }
+      },
+      (error) => {
+        console.error("Error listening to user chats:", error);
+      }
+    );
 
-   this.state.chatListeners.push(unsubscribe);
- };
-
-  
+    this.state.chatListeners.push(unsubscribe);
+  };
 
   // Detaches all chat-related real-time listeners
   this.detachChatListeners = () => {
@@ -424,6 +489,26 @@ const App = function () {
     return date.toLocaleString("en-US", options);
   };
 
+  // Helper to format timestamps for relative time
+  this.formatRelativeTime = (timestamp) => {
+    if (!timestamp || !timestamp.toDate) return "never";
+    const now = new Date();
+    const date = timestamp.toDate();
+    const seconds = Math.floor((now - date) / 1000);
+
+    let interval = seconds / 31536000;
+    if (interval > 1) return `${Math.floor(interval)}y ago`;
+    interval = seconds / 2592000;
+    if (interval > 1) return `${Math.floor(interval)}mo ago`;
+    interval = seconds / 86400;
+    if (interval > 1) return `Offline`; // Simplified for clarity
+    interval = seconds / 3600;
+    if (interval > 1) return `${Math.floor(interval)}h ago`;
+    interval = seconds / 60;
+    if (interval > 1) return `${Math.floor(interval)}m ago`;
+    return "Online"; // If less than a minute, assume online
+  };
+
   // ... rest of methods ...
 
   // --- FIREBASE INSTANCES ---
@@ -431,6 +516,7 @@ const App = function () {
     app: null,
     auth: null,
     db: null,
+    rtdb: null,
   };
 
   // --- Firestore collection paths ---
@@ -484,7 +570,7 @@ const App = function () {
 
   // --- TEMPLATES / VIEWS ---
   this.templates = {
-    // REPLACE your existing 'messages' template function with this corrected version
+   
     messages: () => {
       console.log("Rendering messages template");
       console.log("Chats:", this.state.chats);
@@ -493,14 +579,10 @@ const App = function () {
       if (!user)
         return `<p class="text-center text-gray-400">Please log in to view messages.</p>`;
 
-      const currentChat = this.state.chats.find(
-        (chat) => chat.id === this.state.currentChatId
-      );
+      const currentChat = this.state.chats.find((chat) => chat.id === this.state.currentChatId);
       let chatPartner = null;
       if (currentChat && currentChat.type === "direct") {
-        const otherParticipantId = currentChat.participants.find(
-          (pId) => pId !== user.id
-        );
+        const otherParticipantId = currentChat.participants.find((pId) => pId !== user.id);
         chatPartner = this.state.users.find((u) => u.id === otherParticipantId);
       }
 
@@ -514,6 +596,24 @@ const App = function () {
               : "Chat"
             : "Messages"
         }</h2>
+
+        ${
+          chatPartner
+            ? `
+                <div class="flex items-center space-x-2">
+  <div class="w-2 h-2 rounded-full ${
+    this.isUserOnline(chatPartner.lastSeen) ? "bg-green-400" : "bg-gray-500"
+  }"></div>
+  <p class="text-xs text-gray-400">${
+    this.isUserOnline(chatPartner.lastSeen)
+      ? "Online"
+      : `Last seen: ${this.formatTimestamp(chatPartner.lastSeen, true)}`
+  }</p>
+</div>
+                `
+            : ""
+        }
+        </div>
         ${
           this.state.currentChatId
             ? `
@@ -547,12 +647,19 @@ const App = function () {
                   if (!chatUser) return "";
 
                   return `
-                  <div onclick="app.openChat('${
-                    chat.id
-                  }')" class="bg-gray-700 p-3 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-gray-600">
-                    <img src="${
-                      chatUser.profilePic
-                    }" class="w-12 h-12 rounded-full object-cover">
+                   <div onclick="app.openChat('${
+                     chat.id
+                   }')" class="bg-gray-700 p-3 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-gray-600">
+                    <div class="relative">
+                        <img src="${
+                          chatUser.profilePic
+                        }" class="w-12 h-12 rounded-full object-cover">
+                        <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${
+                          this.isUserOnline(chatUser.lastSeen)
+                            ? "bg-green-400"
+                            : "bg-gray-500"
+                        }"></div>
+                    </div>
                     <div class="flex-1">
                       <p class="font-semibold">${chatUser.firstName} ${
                     chatUser.lastName
@@ -593,10 +700,21 @@ const App = function () {
              const senderUser = this.state.users.find(
                (u) => u.id === msg.senderId
              );
+             if (msg.id.startsWith("temp_") && msg.error) return "";
              return `
-                  <div class="flex ${
-                    isSender ? "justify-end" : "justify-start"
-                  } items-end space-x-2">
+                   <div class="flex items-end space-x-2 group ${
+                     isSender ? "justify-end" : "justify-start"
+                   }">
+                    ${
+                      isSender
+                        ? `
+                    <button onclick="app.unsendMessage('${this.state.currentChatId}', '${msg.id}')" class="unsend-button opacity-0 group-hover:opacity-100 transition-opacity">
+                        <i data-lucide="trash-2" class="w-4 h-4 text-gray-400 hover:text-red-400"></i>
+                    </button>
+                    `
+                        : ""
+                    }
+
                     ${
                       !isSender && senderUser
                         ? `<img src="${senderUser.profilePic}" class="w-8 h-8 rounded-full object-cover">`
@@ -604,21 +722,25 @@ const App = function () {
                     }
                     <div class="max-w-[70%] p-3 rounded-xl ${
                       isSender
-                        ? "chat-bubble-sender rounded-br-none" // This class should be here
-                        : "chat-bubble-receiver rounded-bl-none" // This class should be here
+                        ? "chat-bubble-sender rounded-br-none"
+                        : "chat-bubble-receiver rounded-bl-none"
                     }">
-  <p class="text-sm">${msg.text}</p>
-  <p class="text-xs text-gray-300 text-right mt-1">${this.formatTimestamp(
-    msg.timestamp,
-    true
-  )}</p>
-</div>
+                        <p class="text-sm ${
+                          msg.isRemoved ? "italic text-red-400" : ""
+                        }">
+  ${msg.isRemoved ? "This message was removed." : msg.text}
+</p>
+                        <p class="text-xs text-gray-300 text-right mt-1">${this.formatTimestamp(
+                          msg.timestamp,
+                          true
+                        )}</p>
+                    </div>
                     ${
                       isSender
                         ? `<img src="${user.profilePic}" class="w-8 h-8 rounded-full object-cover">`
                         : ""
                     }
-                  </div>
+                </div>
                 `;
            })
            .join("")
@@ -1045,6 +1167,7 @@ const App = function () {
             </div>
             `;
     },
+
     directory: () => {
       const filteredUsers = this.state.users.filter(
         (u) =>
@@ -1079,15 +1202,17 @@ const App = function () {
             <div class="bg-gray-700 p-3 rounded-lg flex items-center space-x-4 cursor-pointer hover:bg-gray-600" onclick="app.openMemberDetailsModal('${
               user.id
             }')">
-                <img src="${
-                  user.profilePic
-                }" class="w-12 h-12 rounded-full object-cover">
-                <div class="flex-1">
-                    <p class="font-bold">${user.firstName} ${user.lastName}</p>
-                    <p class="text-sm text-gray-400">${
-                      user.skills || "No skills listed"
-                    }</p>
-                </div>
+  <div class="relative">
+    <img src="${user.profilePic}" class="w-12 h-12 rounded-full object-cover">
+    <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${
+      this.isUserOnline(user.lastSeen) ? "bg-green-400" : "bg-gray-500"
+    }"></div>
+  </div>
+  <div class="flex-1">
+    <p class="font-bold">${user.firstName} ${user.lastName}</p>
+    <p class="text-sm text-gray-400">${user.skills || "No skills listed"}</p>
+  </div>
+  
                 <div class="flex space-x-1">
                     ${earnedBadges
                       .map((badge) =>
@@ -1158,27 +1283,20 @@ const App = function () {
                 <div class="fade-in-item bg-gray-700 p-3 rounded-lg flex items-center space-x-4 ${
                   isCurrentUser ? "border-2 border-pink-500" : ""
                 }" style="animation-delay: ${index * 50}ms;">
-                    <div class="w-8 flex justify-center">${rankIndicator}</div>
-                    <img src="${
-                      user.profilePic
-                    }" class="w-12 h-12 rounded-full object-cover">
-                    <div class="flex-1">
-                        <p class="font-bold">${user.firstName} ${
-                  user.lastName
-                }</p>
-                        <div class="flex space-x-1 mt-1">
-                            ${earnedBadges
-                              .map((badge) =>
-                                this.renderBadgeIcon(
-                                  badge.icon,
-                                  "w-4 h-4 text-amber-400"
-                                )
-                              )
-                              .join("")}
-                        </div>
-                    </div>
-                    <p class="font-bold text-amber-400">${user.points} PTS</p>
-                </div>
+  <div class="w-8 flex justify-center">${rankIndicator}</div>
+  <div class="relative">
+    <img src="${user.profilePic}" class="w-12 h-12 rounded-full object-cover">
+    <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${
+      this.isUserOnline(user.lastSeen) ? "bg-green-400" : "bg-gray-500"
+    }"></div>
+  </div>
+  <div class="flex-1">
+    <p class="font-bold">${user.firstName} ${user.lastName}</p>
+    <div class="flex space-x-1 mt-1">
+      </div>
+  </div>
+  <p class="font-bold text-amber-400">${user.points} PTS</p>
+</div>
                 `;
               })
               .join("")}
@@ -1196,6 +1314,7 @@ const App = function () {
             </div>
             `;
     },
+
     scanner: () =>
       `<div class="text-center"><h2 class="text-2xl font-bold mb-2">Scan QR Code</h2><p class="text-gray-400 mb-4">Scan an event or reward QR code.</p><div id="qr-reader" class="w-full rounded-2xl overflow-hidden border-4 border-gray-700"></div><p id="qr-reader-status" class="mt-4 text-sm text-gray-400">Initializing camera...</p></div>`,
 
@@ -1463,7 +1582,17 @@ const App = function () {
                   unverifiedUsers
                     .map(
                       (user) =>
-                        `<div class="bg-gray-700 p-3 rounded-lg"><div class="flex items-center justify-between"> <div class="flex items-center space-x-3"><img src="${user.profilePic}" class="w-10 h-10 rounded-full object-cover"><div> <p class="font-semibold">${user.firstName} ${user.lastName}</p><p class="text-xs text-gray-400">${user.email}</p></div></div><div class="flex space-x-2"><button onclick="app.handleAdminApproveUser('${user.id}')" class="p-2 bg-green-500/20 text-green-400 rounded-md"><i data-lucide="check"></i></button><button onclick="app.handleAdminDeleteUser('${user.id}')" class="p-2 bg-red-500/20 text-red-400 rounded-md"><i data-lucide="x"></i></button></div></div></div>`
+                        `<div class="bg-gray-700 p-3 rounded-lg"><div class="flex items-center justify-between"> 
+                          <div class="flex items-center space-x-3"><img src="${user.profilePic}" class="w-10 h-10 rounded-full object-cover"><div>
+                          <p class="font-semibold">${user.firstName} ${user.lastName}</p>
+                          <p class="text-xs text-gray-400">${user.email}</p>
+                          </div>
+                         </div>
+                         
+                         <div class="flex space-x-2">
+                            <button onclick="app.handleAdminApproveUser('${user.id}')" class="p-2 bg-green-500/20 text-green-400 rounded-md"><i data-lucide="check"></i></button>
+                            <button onclick="app.handleAdminDeleteUser('${user.id}')" class="p-2 bg-red-500/20 text-red-400 rounded-md"><i data-lucide="x"></i></button>
+                          </div></div></div>`
                     )
                     .join("") ||
                   '<p class="text-gray-400 text-center py-4">No new users to verify.</p>'
@@ -1748,12 +1877,14 @@ const App = function () {
       messagingSenderId: "511564194366",
       appId: "1:511564194366:web:f4a5bda9e35b404103676f",
       measurementId: "G-QRL1B9JHND",
+      databaseURL: "https://qrcode-7f9c0-default-rtdb.firebaseio.com",
     };
 
     try {
       this.fb.app = initializeApp(firebaseConfig);
       this.fb.auth = getAuth(this.fb.app);
       this.fb.db = getFirestore(this.fb.app);
+      this.fb.rtdb = getDatabase(this.fb.app);
     } catch (error) {
       console.error("Firebase initialization failed:", error);
       this.elements.loadingText.textContent =
@@ -1776,6 +1907,7 @@ const App = function () {
           this.elements.appHeader.classList.remove("hidden");
           this.elements.appNav.classList.remove("hidden");
           this.applyTheme(this.state.loggedInUser.theme);
+          this.managePresence();
           this.attachListeners(); // Attach all necessary listeners for the logged-in user
           this.updateUserInfo();
           this.navigateTo("dashboard");
@@ -1793,11 +1925,60 @@ const App = function () {
       }
       this.elements.loadingOverlay.classList.add("hidden");
     });
+    
   };
+
+  // --- NEW FUNCTION: MANAGE PRESENCE ---
+  this.managePresence = () => {
+    if (!this.state.firebaseUser) return;
+
+    const myUid = this.state.firebaseUser.uid;
+    const userStatusDatabaseRef = ref(this.fb.rtdb, `/status/${myUid}`);
+    const userStatusFirestoreRef = doc(this.fb.db, this.paths.userDoc(myUid));
+
+    const isOfflineForRTDB = {
+      state: "offline",
+      last_changed: serverTimestamp(),
+    };
+
+    const isOnlineForRTDB = {
+      state: "online",
+      last_changed: serverTimestamp(),
+    };
+
+    const isOfflineForFirestore = {
+      online: false,
+      lastSeen: firestoreServerTimestamp(),
+    };
+
+    const isOnlineForFirestore = {
+      online: true,
+      lastSeen: firestoreServerTimestamp(),
+    };
+
+    // Listen for connection status to RTDB
+    onValue(ref(this.fb.rtdb, ".info/connected"), (snapshot) => {
+      if (snapshot.val() === false) {
+        // If connection is lost, update firestore
+        updateDoc(userStatusFirestoreRef, isOfflineForFirestore);
+        return;
+      }
+
+      // If connection is established, set up onDisconnect hooks
+      onDisconnect(userStatusDatabaseRef)
+        .set(isOfflineForRTDB)
+        .then(() => {
+          set(userStatusDatabaseRef, isOnlineForRTDB);
+          updateDoc(userStatusFirestoreRef, isOnlineForFirestore);
+        });
+    });
+  };
+  
 
   // --- REAL-TIME LISTENERS ---
   this.attachListeners = () => {
     // Listeners for data specific to the logged-in user
+   
     const userListener = onSnapshot(
       doc(this.fb.db, this.paths.userDoc(this.state.firebaseUser.uid)),
       (doc) => {
@@ -1909,6 +2090,7 @@ const App = function () {
       }
     );
     this.state.listeners.push(badgesListener);
+    this.listenToUsers();
 
     const mapSpotsListener = onSnapshot(
       query(collection(this.fb.db, this.paths.mapSpots)),
@@ -1943,7 +2125,7 @@ const App = function () {
 
       this.state.listeners.push(systemLogsListener);
     }
-
+ 
     this.listenToUserChats();
   };
 
@@ -2006,6 +2188,16 @@ const App = function () {
     this.render();
   };
 
+  // 5minutes Online
+  this.isUserOnline = (timestamp) => {
+    if (!timestamp) return false;
+    const lastSeenTime = timestamp.toDate();
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    return lastSeenTime > fiveMinutesAgo;
+  };
+
+
+
   this.updateNav = () => {
     document.querySelectorAll(".nav-button").forEach((btn) => {
       btn.classList.remove("pride-gradient-text");
@@ -2030,9 +2222,6 @@ const App = function () {
       );
     }
 
-    
-
-    
     switch (this.state.currentPage) {
       // case "messages":
       //   if (this.state.currentChatId) {
@@ -2052,15 +2241,12 @@ const App = function () {
         if (messagesContainer) {
           // **THIS IS THE FIX**: Set the scroll position to the very bottom
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-          
         }
-       
-      
+
         // Note: It's often better to use onsubmit="app.sendMessage(event)" in your HTML template
         // rather than adding this listener here, to avoid attaching it multiple times.
         // If your form in the render function already has that, you can remove the code below.
-      
+
         if (this.state.currentChatId) {
           const chatInputForm = document.getElementById("chat-input-form"); // Ensure your form has this ID
           if (chatInputForm) {
@@ -3548,6 +3734,9 @@ const App = function () {
         validatedAt: null,
         earnedBadgeIds: [],
         theme: "default",
+        lastSeen: firestoreServerTimestamp(),
+        online: true,
+       
       };
       await setDoc(doc(this.fb.db, this.paths.userDoc(user.uid)), userProfile);
       this.state.loggedInUser = { id: user.uid, ...userProfile };
@@ -3561,9 +3750,30 @@ const App = function () {
     }
   };
   this.handleLogout = async () => {
-    await this.logAction("USER_LOGOUT", `User logged out.`);
-    await signOut(this.fb.auth);
+    // Set user to offline before signing out
+     await this.logAction("USER_LOGOUT", `User logged out.`);
+     await signOut(this.fb.auth);
+    if (this.state.loggedInUser) {
+      const userStatusFirestoreRef = doc(
+        this.fb.db,
+        this.paths.userDoc(this.state.loggedInUser.id)
+      );
+      await updateDoc(userStatusFirestoreRef, {
+        online: false,
+        lastSeen: firestoreServerTimestamp(),
+      });
+      const userStatusDatabaseRef = ref(
+        this.fb.rtdb,
+        `/status/${this.state.loggedInUser.id}`
+      );
+      await set(userStatusDatabaseRef, {
+        state: "offline",
+        last_changed: serverTimestamp(),
+      });
+    }
+  
   };
+
   this.handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -5065,6 +5275,7 @@ window.app = app; // Make app globally accessible for inline event handlers
 // Initialize the main application immediately when the DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
   app.init();
+  
   // FIX: Use event delegation for forms that might not exist on page load
   app.elements.mainContent.addEventListener("submit", (e) => {
     if (e.target.id === "login-form") {

@@ -45,6 +45,14 @@ body {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.unsend-button {
+    /* Basic styling for the unsend button */
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
 .floating-back-button:hover {
   background-color: rgba(55, 65, 81, 0.9);
 }
@@ -552,5 +560,4 @@ body.theme-rainbow2 .chat-send-button { background-color: #8a0067 !important; }
 /* Digital Theme */
 body.theme-rainbow .chat-bubble-sender { background-color: rgb(36, 36, 36) !important; }
 body.theme-rainbow .chat-bubble-receiver { background-color: #474747 !important; }
-
 body.theme-rainbow .chat-send-button { background-color: #167ba3 !important; }
