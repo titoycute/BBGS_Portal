@@ -16,6 +16,7 @@ body {
 }
 
 
+
 #app {
   position: relative;
   z-index: 1;
@@ -561,3 +562,35 @@ body.theme-rainbow2 .chat-send-button { background-color: #8a0067 !important; }
 body.theme-rainbow .chat-bubble-sender { background-color: rgb(36, 36, 36) !important; }
 body.theme-rainbow .chat-bubble-receiver { background-color: #474747 !important; }
 body.theme-rainbow .chat-send-button { background-color: #167ba3 !important; }
+
+
+/* Daily Rewards Theming */
+.reward-box-claimed {
+    background-color: #f59e0b !important; /* Default: Amber */
+    border-color: #f59e0b !important;
+}
+
+.reward-box-claimable {
+    background-color: #22c55e !important; /* Default: Green */
+    border-color: #22c55e !important;
+}
+
+/* White Golden Theme */
+body.theme-light .reward-box-claimed { background-color: #ca8a04 !important; border-color: #ca8a04 !important; }
+body.theme-light .reward-box-claimable { background-color: #65a30d !important; border-color: #65a30d !important; }
+
+/* Blue Spectrum Theme */
+body.theme-blue .reward-box-claimed { background-color: #3b82f6 !important; border-color: #3b82f6 !important; }
+body.theme-blue .reward-box-claimable { background-color: #14b8a6 !important; border-color: #14b8a6 !important; }
+
+/* IbidAko Theme */
+body.theme-green .reward-box-claimed { background-color: #f97316 !important; border-color: #f97316 !important; }
+body.theme-green .reward-box-claimable { background-color: #16a34a !important; border-color: #16a34a !important; }
+
+/* Pink Sparkle Theme */
+body.theme-pink .reward-box-claimed { background-color: #ec4899 !important; border-color: #ec4899 !important; }
+body.theme-pink .reward-box-claimable { background-color: #d946ef !important; border-color: #d946ef !important; }
+
+/* DasigNaval Theme */
+body.theme-rainbow2 .reward-box-claimed { background-color: #f97316 !important; border-color: #f97316 !important; }
+body.theme-rainbow2 .reward-box-claimable { background-color: #16a34a !important; border-color: #16a34a !important; }
