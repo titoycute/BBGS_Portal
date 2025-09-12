@@ -112,32 +112,32 @@ const App = function () {
     }, 100);
   };
 
-   this.listenToUsers = () => {
-     const usersCollectionRef = collection(this.fb.db, this.paths.users);
-     const q = query(usersCollectionRef);
+  this.listenToUsers = () => {
+    const usersCollectionRef = collection(this.fb.db, this.paths.users);
+    const q = query(usersCollectionRef);
 
-     const unsubscribe = onSnapshot(
-       q,
-       (snapshot) => {
-         // Update the local state with the latest user data
-         this.state.users = snapshot.docs.map((doc) => ({
-           id: doc.id,
-           ...doc.data(),
-         }));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        // Update the local state with the latest user data
+        this.state.users = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-         // Re-render the chat list and active chat views to show updated status
-         if (this.state.currentPage === "messages") {
-           this.render();
-         }
-       },
-       (error) => {
-         console.error("Error listening to users:", error);
-       }
-     );
+        // Re-render the chat list and active chat views to show updated status
+        if (this.state.currentPage === "messages") {
+          this.render();
+        }
+      },
+      (error) => {
+        console.error("Error listening to users:", error);
+      }
+    );
 
-     // Save the unsubscribe function to the general listeners array
-     this.state.listeners.push(unsubscribe);
-   };
+    // Save the unsubscribe function to the general listeners array
+    this.state.listeners.push(unsubscribe);
+  };
 
   this.listenToChatMessages = (chatId) => {
     if (!chatId) return;
@@ -294,7 +294,7 @@ const App = function () {
       this.render(); // Re-render to show the message has been removed.
     }
   };
-//UNSEND MESSAGE//
+  //UNSEND MESSAGE//
   this.unsendMessage = (chatId, messageId) => {
     if (!chatId || !messageId) return;
 
@@ -310,9 +310,9 @@ const App = function () {
             messageId
           );
           await updateDoc(messageRef, {
-      isRemoved: true,
-      text: "This message was removed."
-    });
+            isRemoved: true,
+            text: "This message was removed.",
+          });
 
           // NOTE: The real-time listener will automatically update the UI.
           // For a more advanced implementation, you could update the `lastMessage`
@@ -570,7 +570,6 @@ const App = function () {
 
   // --- TEMPLATES / VIEWS ---
   this.templates = {
-   
     messages: () => {
       console.log("Rendering messages template");
       console.log("Chats:", this.state.chats);
@@ -579,10 +578,14 @@ const App = function () {
       if (!user)
         return `<p class="text-center text-gray-400">Please log in to view messages.</p>`;
 
-      const currentChat = this.state.chats.find((chat) => chat.id === this.state.currentChatId);
+      const currentChat = this.state.chats.find(
+        (chat) => chat.id === this.state.currentChatId
+      );
       let chatPartner = null;
       if (currentChat && currentChat.type === "direct") {
-        const otherParticipantId = currentChat.participants.find((pId) => pId !== user.id);
+        const otherParticipantId = currentChat.participants.find(
+          (pId) => pId !== user.id
+        );
         chatPartner = this.state.users.find((u) => u.id === otherParticipantId);
       }
 
@@ -1925,7 +1928,6 @@ const App = function () {
       }
       this.elements.loadingOverlay.classList.add("hidden");
     });
-    
   };
 
   // --- NEW FUNCTION: MANAGE PRESENCE ---
@@ -1973,12 +1975,11 @@ const App = function () {
         });
     });
   };
-  
 
   // --- REAL-TIME LISTENERS ---
   this.attachListeners = () => {
     // Listeners for data specific to the logged-in user
-   
+
     const userListener = onSnapshot(
       doc(this.fb.db, this.paths.userDoc(this.state.firebaseUser.uid)),
       (doc) => {
@@ -2125,7 +2126,7 @@ const App = function () {
 
       this.state.listeners.push(systemLogsListener);
     }
- 
+
     this.listenToUserChats();
   };
 
@@ -2195,8 +2196,6 @@ const App = function () {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     return lastSeenTime > fiveMinutesAgo;
   };
-
-
 
   this.updateNav = () => {
     document.querySelectorAll(".nav-button").forEach((btn) => {
@@ -3736,7 +3735,6 @@ const App = function () {
         theme: "default",
         lastSeen: firestoreServerTimestamp(),
         online: true,
-       
       };
       await setDoc(doc(this.fb.db, this.paths.userDoc(user.uid)), userProfile);
       this.state.loggedInUser = { id: user.uid, ...userProfile };
@@ -3751,8 +3749,8 @@ const App = function () {
   };
   this.handleLogout = async () => {
     // Set user to offline before signing out
-     await this.logAction("USER_LOGOUT", `User logged out.`);
-     await signOut(this.fb.auth);
+    await this.logAction("USER_LOGOUT", `User logged out.`);
+    await signOut(this.fb.auth);
     if (this.state.loggedInUser) {
       const userStatusFirestoreRef = doc(
         this.fb.db,
@@ -3771,7 +3769,6 @@ const App = function () {
         last_changed: serverTimestamp(),
       });
     }
-  
   };
 
   this.handleGoogleLogin = async () => {
@@ -5198,7 +5195,13 @@ const App = function () {
       event.isVisible ? "checked" : ""
     } class="h-5 w-5 rounded accent-pink-500"><label for="event-visible-edit">Visible to Members</label></div><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold mt-2">Save Event Changes</button><button type="button" onclick="app.handleAdminDeleteEvent('${
       event.id
-    }')" class="w-full bg-red-500/20 text-red-400 py-3 rounded-lg font-semibold mt-2">Delete Event</button></form><div class="text-center"><p class="mb-2 font-semibold">Event QR Code</p><div class="bg-white p-2 rounded-xl max-w-xs mx-auto"><canvas id="detail-event-qr"></canvas></div></div></div><div x-show="tab === 'attendees'" style="display: none;"><div class="space-y-2">${
+    }')" class="w-full bg-red-500/20 text-red-400 py-3 rounded-lg font-semibold mt-2">Delete Event</button></form><div class="text-center"><p class="mb-2 font-semibold">Event QR Code</p><div class="bg-white p-2 rounded-xl max-w-xs mx-auto"><canvas id="detail-event-qr"></canvas></div></div></div><div x-show="tab === 'attendees'" style="display: none;">
+    <button type="button" id="export-attendees-btn" class="w-full py-2 rounded-lg font-semibold bg-gray-600 hover:bg-gray-700 transition-colors duration-200 mt-4 flex items-center justify-center space-x-2">
+    <i data-lucide="download"></i>
+    <span>Export to Excel</span>
+</button>
+
+    <div class="space-y-2">${
       attendees
         .map(
           (a) =>
@@ -5207,7 +5210,14 @@ const App = function () {
         .join("") ||
       '<p class="text-center text-gray-400">No one has checked in yet.</p>'
     }</div></div></div>`;
+
     this.openFullscreenModal(`Manage: ${event.name}`, content);
+    const exportBtn = document.getElementById("export-attendees-btn");
+    if (exportBtn) {
+      exportBtn.addEventListener("click", () => {
+        this.exportAttendeesToCsv(eventId);
+      });
+    }
     this.generateQRCode(
       "detail-event-qr",
       JSON.stringify({ type: "event", id: event.id }),
@@ -5216,7 +5226,119 @@ const App = function () {
     document
       .getElementById("admin-edit-event-form")
       .addEventListener("submit", this.handleAdminUpdateEvent.bind(this));
+
+    // Add these lines to attach the event listener to the button.
+    
   };
+
+  // New function to export attendees as a CSV file
+ this.exportAttendeesToCsv = async (eventId) => {
+   try {
+     this.showModal(
+       "info",
+       "Exporting...",
+       "Please wait while we prepare the file."
+     );
+
+     const event = this.state.events.find((e) => e.id === eventId);
+     if (!event) {
+       console.error("Event not found for export.");
+       this.showModal("error", "Export Failed", "Event data is not available.");
+       return;
+     }
+
+     // Helper function to sanitize data for CSV
+     const sanitizeCsvField = (field) => {
+       if (typeof field !== "string") {
+         return "";
+       }
+       // Escape double quotes and enclose the field in quotes
+       const escapedField = field.replace(/"/g, '""');
+       return `"${escapedField}"`;
+     };
+
+     // 1. Fetch check-ins for the event
+     const checkInsRef = collection(this.fb.db, this.paths.checkIns);
+     const q = query(checkInsRef, where("eventId", "==", eventId));
+     const querySnapshot = await getDocs(q);
+
+     if (querySnapshot.empty) {
+       this.showModal(
+         "info",
+         "No Attendees",
+         "There are no attendees to export for this event."
+       );
+       return;
+     }
+
+     // 2. Fetch user data for each attendee concurrently
+     const userPromises = querySnapshot.docs.map(async (checkInDoc) => {
+       const checkIn = checkInDoc.data();
+       let user = {};
+
+       if (checkIn.userId) {
+         const userDocRef = doc(this.fb.db, this.paths.users, checkIn.userId);
+         const userDocSnap = await getDoc(userDocRef);
+         if (userDocSnap.exists()) {
+           user = userDocSnap.data();
+         }
+       }
+
+       return { ...checkIn, user };
+     });
+
+     const fullAttendeesData = await Promise.all(userPromises);
+
+     // 3. Convert data to CSV format
+     const headers = ["Last Name", "First Name", "Email", "Timestamp"];
+
+     const csvRows = [
+       headers.join(","),
+       ...fullAttendeesData.map((item) => {
+         const lastName = item.user?.lastName || "N/A";
+         const firstName = item.user?.firstName || "N/A";
+         const email = item.user?.email || "N/A";
+         const timestamp = item.timestamp?.toDate()?.toLocaleString() || "N/A";
+
+         return `${sanitizeCsvField(lastName)},${sanitizeCsvField(
+           firstName
+         )},${sanitizeCsvField(email)},${sanitizeCsvField(timestamp)}`;
+       }),
+     ];
+     const csvString = csvRows.join("\n");
+
+     // 4. Trigger download
+     const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+     const url = URL.createObjectURL(blob);
+     const link = document.createElement("a");
+     link.setAttribute("href", url);
+     link.setAttribute(
+       "download",
+       `Attendees_${event.name.replace(/[^a-z0-9]/gi, "_")}.csv`
+     );
+     link.style.display = "none";
+     document.body.appendChild(link);
+
+     link.click();
+
+     document.body.removeChild(link);
+     URL.revokeObjectURL(url);
+
+     this.showModal(
+       "success",
+       "Export Successful",
+       "Attendees list has been downloaded."
+     );
+   } catch (error) {
+     console.error("Export failed:", error);
+     this.showModal(
+       "error",
+       "Export Failed",
+       "An error occurred during the export process."
+     );
+   }
+ };
+
   this.openBadgeDetailsModal = (name, description, icon, earned) => {
     const content = `<div class="text-center space-y-4"><div class="mx-auto w-32 h-32 flex items-center justify-center">${this.renderBadgeIcon(
       icon,
