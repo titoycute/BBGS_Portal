@@ -49,7 +49,7 @@ import {
  
 
 // --- Main Application Logic ---
-
+const DAILY_REWARD_POINTS = [10, 15, 20, 25, 100]; // Day 1, Day 2, Day 3, Day 4, Day 5
 const App = function () {
   // --- STATE MANAGEMENT ---
   const currentDate = new Date();
@@ -96,6 +96,183 @@ const App = function () {
     allMessagesLoaded: false,
   };
 
+  // Add these new functions inside your App function in script.js
+
+  // Add these two new functions inside your App function in script.js
+
+  this.prepareLoginRewardState = (userData) => {
+    const today = new Date().toISOString().split("T")[0]; // Get date as "YYYY-MM-DD"
+    const lastLogin =
+      userData.lastLoginDate?.toDate().toISOString().split("T")[0] || null;
+
+    let currentStreak = userData.consecutiveLogins || 0;
+    let canClaim = false;
+
+    if (lastLogin !== today) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+      if (lastLogin !== yesterdayStr) {
+        // Streak is broken if last login wasn't yesterday
+        currentStreak = 0;
+      }
+
+      if (currentStreak >= 5) {
+        // Completed a 5-day cycle, so reset for a new one
+        currentStreak = 0;
+      }
+      canClaim = true;
+    }
+
+    this.state.loginReward = {
+      currentStreak,
+      canClaim,
+    };
+  };
+
+  // Replace your existing claimDailyReward function with this one
+
+  this.claimDailyReward = async () => {
+    if (!this.state.loginReward.canClaim) {
+      this.showModal(
+        "error",
+        "Already Claimed",
+        "You have already claimed your reward for today."
+      );
+      return;
+    }
+
+    this.showLoading("Claiming Reward...");
+    const uid = this.fb.auth.currentUser.uid;
+    const userRef = doc(this.fb.db, this.paths.users, uid);
+
+    try {
+      const newStreak = (this.state.loginReward.currentStreak % 5) + 1;
+      const pointsToAdd = DAILY_REWARD_POINTS[newStreak - 1]; 
+
+      // 1. Update the document in Firestore. This part was already working.
+      await updateDoc(userRef, {
+        points: increment(pointsToAdd),
+        consecutiveLogins: newStreak,
+        lastLoginDate: Timestamp.now(),
+      });
+
+      // 2. (THE FIX) Fetch the updated user data directly from Firestore.
+      // This ensures our local data is perfectly in sync.
+      const updatedUserDoc = await getDoc(userRef);
+      this.state.loggedInUser = {
+        id: updatedUserDoc.id,
+        ...updatedUserDoc.data(),
+      };
+
+      // 3. Hide the loading spinner and show the success message.
+      this.hideLoading();
+      this.showModal(
+        "success",
+        "Reward Claimed!",
+        `You have earned ${pointsToAdd} points! Your streak is now ${newStreak} days.`
+      );
+
+      // 4. Re-render the dashboard with the fresh, correct data.
+      this.render("dashboard");
+      lucide.createIcons();
+    } catch (error) {
+      // This error block will now only run if the database update truly fails.
+      console.error("Error claiming reward: ", error);
+      this.hideLoading();
+      this.showModal(
+        "error",
+        "Error",
+        "Could not claim your reward. Please try again."
+      );
+    }
+  };
+
+  // Replace your old downloadAttendees function with this one
+  this.downloadAttendees = async (eventId, eventName) => {
+    this.showLoading("Fetching attendee data...");
+
+    try {
+      // 1. Get all check-ins for the specified event
+      const checkInsRef = collection(this.fb.db, this.paths.checkIns);
+      const q = query(checkInsRef, where("eventId", "==", eventId));
+      const checkInsSnapshot = await getDocs(q);
+
+      if (checkInsSnapshot.empty) {
+        this.hideLoading();
+        this.showModal(
+          "info",
+          "No Attendees",
+          "There are no attendees for this event yet."
+        );
+        return;
+      }
+
+      // THIS IS THE CORRECTED PART
+      const attendeePromises = checkInsSnapshot.docs.map((checkInDoc) => {
+        // Variable renamed from 'doc' to 'checkInDoc'
+        const userId = checkInDoc.data().userId;
+        const userDocRef = doc(this.fb.db, this.paths.users, userId); // Now 'doc' correctly refers to the Firebase function
+        return getDoc(userDocRef);
+      });
+
+      const userDocs = await Promise.all(attendeePromises);
+      const attendees = userDocs.map((userDoc) => userDoc.data());
+
+      // 3. Convert the data to CSV format
+      let csvContent = "data:text/csv;charset=utf-8,";
+      // Add headers
+      csvContent += "Name,Email,Points\r\n";
+
+      // Add rows
+      attendees.forEach((attendee) => {
+        if (attendee) {
+          // Ensure attendee data exists
+          const fullName = `${attendee.firstName} ${attendee.lastName}`;
+          csvContent += `"${fullName}","${attendee.email}",${attendee.points}\r\n`;
+        }
+      });
+
+      // 4. Create a link and trigger the download
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+
+      // Sanitize the event name for the filename
+      const safeEventName = eventName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+      link.setAttribute("download", `${safeEventName}_attendees.csv`);
+
+      document.body.appendChild(link); // Required for Firefox
+      link.click();
+      document.body.removeChild(link);
+
+      this.hideLoading();
+    } catch (error) {
+      console.error("Error downloading attendees:", error);
+      this.hideLoading();
+      this.showModal(
+        "error",
+        "Download Failed",
+        "Could not download the attendee list. Please try again."
+      );
+    }
+  };
+
+  this.showLoading = (message) => {
+    this.elements.modalTitle.textContent = message || "Loading...";
+    this.elements.modalMessage.textContent = "Please wait a moment.";
+    this.elements.modalIcon.innerHTML = `<svg class="animate-spin h-10 w-10 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>`;
+    this.elements.modalButtons.innerHTML = ""; // No buttons for loading
+    this.elements.modal.classList.remove("hidden");
+  };
+
+  this.hideLoading = () => {
+    this.elements.modal.classList.add("hidden");
+  };
   // --- Chat Functionality ---
 
   this.openChat = (chatId) => {
@@ -112,32 +289,32 @@ const App = function () {
     }, 100);
   };
 
-   this.listenToUsers = () => {
-     const usersCollectionRef = collection(this.fb.db, this.paths.users);
-     const q = query(usersCollectionRef);
+  this.listenToUsers = () => {
+    const usersCollectionRef = collection(this.fb.db, this.paths.users);
+    const q = query(usersCollectionRef);
 
-     const unsubscribe = onSnapshot(
-       q,
-       (snapshot) => {
-         // Update the local state with the latest user data
-         this.state.users = snapshot.docs.map((doc) => ({
-           id: doc.id,
-           ...doc.data(),
-         }));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        // Update the local state with the latest user data
+        this.state.users = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-         // Re-render the chat list and active chat views to show updated status
-         if (this.state.currentPage === "messages") {
-           this.render();
-         }
-       },
-       (error) => {
-         console.error("Error listening to users:", error);
-       }
-     );
+        // Re-render the chat list and active chat views to show updated status
+        if (this.state.currentPage === "messages") {
+          this.render();
+        }
+      },
+      (error) => {
+        console.error("Error listening to users:", error);
+      }
+    );
 
-     // Save the unsubscribe function to the general listeners array
-     this.state.listeners.push(unsubscribe);
-   };
+    // Save the unsubscribe function to the general listeners array
+    this.state.listeners.push(unsubscribe);
+  };
 
   this.listenToChatMessages = (chatId) => {
     if (!chatId) return;
@@ -294,7 +471,7 @@ const App = function () {
       this.render(); // Re-render to show the message has been removed.
     }
   };
-//UNSEND MESSAGE//
+  //UNSEND MESSAGE//
   this.unsendMessage = (chatId, messageId) => {
     if (!chatId || !messageId) return;
 
@@ -310,9 +487,9 @@ const App = function () {
             messageId
           );
           await updateDoc(messageRef, {
-      isRemoved: true,
-      text: "This message was removed."
-    });
+            isRemoved: true,
+            text: "This message was removed.",
+          });
 
           // NOTE: The real-time listener will automatically update the UI.
           // For a more advanced implementation, you could update the `lastMessage`
@@ -570,7 +747,6 @@ const App = function () {
 
   // --- TEMPLATES / VIEWS ---
   this.templates = {
-   
     messages: () => {
       console.log("Rendering messages template");
       console.log("Chats:", this.state.chats);
@@ -579,10 +755,14 @@ const App = function () {
       if (!user)
         return `<p class="text-center text-gray-400">Please log in to view messages.</p>`;
 
-      const currentChat = this.state.chats.find((chat) => chat.id === this.state.currentChatId);
+      const currentChat = this.state.chats.find(
+        (chat) => chat.id === this.state.currentChatId
+      );
       let chatPartner = null;
       if (currentChat && currentChat.type === "direct") {
-        const otherParticipantId = currentChat.participants.find((pId) => pId !== user.id);
+        const otherParticipantId = currentChat.participants.find(
+          (pId) => pId !== user.id
+        );
         chatPartner = this.state.users.find((u) => u.id === otherParticipantId);
       }
 
@@ -784,106 +964,155 @@ const App = function () {
                 </div>
             </div>`,
 
+    // Replace your existing dashboard template with this one
+
     dashboard: () => {
       const user = this.state.loggedInUser;
       if (!user.isValidated) {
         return `
-            <div class="text-center p-6 bg-gray-900/50 rounded-xl">
-                <i data-lucide="shield-alert" class="w-16 h-16 mx-auto text-amber-400 mb-4"></i>
-                <h2 class="text-2xl font-bold mb-2">Account Pending Approval</h2>
-                <p class="text-gray-400">Your account has been registered successfully. An administrator will review your profile shortly. Once approved, you will have full access to all features.</p>
-            </div>
-        `;
+      <div class="text-center p-6 bg-gray-900/50 rounded-xl">
+          <i data-lucide="shield-alert" class="w-16 h-16 mx-auto text-amber-400 mb-4"></i>
+          <h2 class="text-2xl font-bold mb-2">Account Pending Approval</h2>
+          <p class="text-gray-400">Your account has been registered successfully. An administrator will review your profile shortly. Once approved, you will have full access to all features.</p>
+      </div>
+    `;
       }
+
+      // --- Start of New Code ---
+      this.prepareLoginRewardState(user);
+      const rewardState = this.state.loginReward || {
+        currentStreak: 0,
+        canClaim: false,
+      };
+
+      const renderRewardBoxes = () => {
+        return [1, 2, 3, 4, 5]
+          .map((day) => {
+            const isClaimed = day <= rewardState.currentStreak;
+            const isClaimable =
+              rewardState.canClaim && day === rewardState.currentStreak + 1;
+             const points = DAILY_REWARD_POINTS[day - 1];
+
+            let boxClass = "bg-gray-700/50 border-2 border-gray-600";
+            let content = `<div class="font-bold text-gray-400">${day}</div><div class="text-xs text-gray-500">${points} pts</div>`;
+            let onClick = "";
+
+            if (isClaimed) {
+              boxClass = "bg-yellow-500/30 border-2 border-yellow-500";
+              content = `<i data-lucide="check-circle" class="w-8 h-8 text-yellow-400 mx-auto"></i>`;
+            } else if (isClaimable) {
+              boxClass =
+                "bg-green-500/30 border-2 border-green-500 cursor-pointer animate-pulse";
+              content = `<div class="font-bold text-white">Claim</div><div class="text-xs text-green-300">${points} pts</div>`;
+              onClick = `onclick="app.claimDailyReward()"`;
+            }
+
+            return `
+        <div class="rounded-lg p-2 aspect-square flex flex-col justify-center items-center ${boxClass}" ${onClick}>
+          ${content}
+        </div>
+      `;
+          })
+          .join("");
+      };
+      // --- End of New Code ---
+
       const latestAnnouncement = this.state.announcements[0];
       const earnedBadges = (user.earnedBadgeIds || [])
         .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
         .filter(Boolean)
         .slice(0, 10); // Show max 10 badges
+
       return `
-        <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
-            <div class="bg-gray-800 rounded-xl p-4 space-y-4">
-                <div class="flex space-x-4 items-center">
-                    <img src="${
-                      user.profilePic
-                    }" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
-                    <div class="flex-1">
-                        <h2 class="text-xl font-bold">${user.firstName} ${
+    <div class="mb-4">
+      <h3 class="text-lg font-bold text-white mb-2">Daily Rewards</h3>
+      <div class="grid grid-cols-5 gap-2 text-center">
+        ${renderRewardBoxes()}
+      </div>
+    </div>
+    <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
+        <div class="bg-gray-800 rounded-xl p-4 space-y-4">
+            <div class="flex space-x-4 items-center">
+                <img src="${
+                  user.profilePic
+                }" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
+                <div class="flex-1">
+                    <h2 class="text-xl font-bold">${user.firstName} ${
         user.lastName
       }</h2>
-                        <p class="text-sm text-gray-400">Member Since: ${
-                          user.memberSince || "N/A"
-                        }</p>
-                    </div>
-                    <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
-                        <canvas id="member-qr-code"></canvas>
-                    </div>
+                    <p class="text-sm text-gray-400">Member Since: ${
+                      user.memberSince || "N/A"
+                    }</p>
                 </div>
-                ${
-                  earnedBadges.length > 0
-                    ? `
-                <div class="border-t border-gray-700 pt-3">
-                    <div class="flex items-center justify-center space-x-3">
-                        ${earnedBadges
-                          .map((badge) =>
-                            this.renderBadgeIcon(
-                              badge.icon,
-                              "w-6 h-6 text-amber-400"
-                            )
-                          )
-                          .join("")}
-                    </div>
-                </div>`
-                    : ""
-                }
+                <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
+                    <canvas id="member-qr-code"></canvas>
+                </div>
             </div>
-        </div>
-        <br>
-        <div class="grid grid-cols-2 gap-4">
-            <button onclick="app.navigateTo('scanner')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-                <i data-lucide="scan-line" class="text-pink-400"></i>
-                <span class="font-semibold">Scan QR Code</span>
-            </button>
-            <button onclick="app.navigateTo('profile')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-                <i data-lucide="user-circle" class="text-purple-400"></i>
-                <span class="font-semibold">My Profile</span>
-            </button>
-        </div>
-        <br>
-        <div class="grid grid-cols-2 gap-4">
-            <button onclick="app.navigateTo('facebookFeed')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-                <i data-lucide="facebook" class="text-blue-400"></i>
-                <span class="font-semibold">BBGS Updates</span>
-            </button>
-            <button onclick="app.navigateTo('qrSpots')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-                <i data-lucide="map-pin" class="text-green-400"></i>
-                <span class="font-semibold">QR Spots</span>
-            </button>
-            <button onclick="app.navigateTo('games')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-                <i data-lucide="gamepad-2" class="text-purple-400"></i>
-                <span class="font-semibold">Games</span>
-            </button>
-            <button onclick="app.navigateTo('leaderboard')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-                <i data-lucide="bar-chart-3" class="text-blue-400"></i>
-                <span class="font-semibold">Ranks</span>
-            </button>
-        </div>
-        <br>
-        <div class="space-y-6">
             ${
-              latestAnnouncement
+              earnedBadges.length > 0
                 ? `
-            <div class="bg-gray-900/50 p-4 rounded-xl border-l-4 border-pink-500">
-                <div class="flex items-center justify-between mb-1">
-                    <h3 class="font-bold text-lg text-pink-400">Announcement</h3>
-                    <p class="text-xs text-gray-400">${latestAnnouncement.timestamp}</p>
+            <div class="border-t border-gray-700 pt-3">
+                <div class="flex items-center justify-center space-x-3">
+                    ${earnedBadges
+                      .map((badge) =>
+                        this.renderBadgeIcon(
+                          badge.icon,
+                          "w-6 h-6 text-amber-400"
+                        )
+                      )
+                      .join("")}
                 </div>
-                <p class="text-gray-300">${latestAnnouncement.message}</p>
             </div>`
                 : ""
             }
         </div>
-    `;
+    </div>
+    <br>
+    <div class="grid grid-cols-2 gap-4">
+        <button onclick="app.navigateTo('scanner')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+            <i data-lucide="scan-line" class="text-pink-400"></i>
+            <span class="font-semibold">Scan QR Code</span>
+        </button>
+        <button onclick="app.navigateTo('profile')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+            <i data-lucide="user-circle" class="text-purple-400"></i>
+            <span class="font-semibold">My Profile</span>
+        </button>
+    </div>
+    <br>
+    <div class="grid grid-cols-2 gap-4">
+        <button onclick="app.navigateTo('facebookFeed')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+            <i data-lucide="facebook" class="text-blue-400"></i>
+            <span class="font-semibold">BBGS Updates</span>
+        </button>
+        <button onclick="app.navigateTo('qrSpots')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+            <i data-lucide="map-pin" class="text-green-400"></i>
+            <span class="font-semibold">QR Spots</span>
+        </button>
+        <button onclick="app.navigateTo('games')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+            <i data-lucide="gamepad-2" class="text-purple-400"></i>
+            <span class="font-semibold">Games</span>
+        </button>
+        <button onclick="app.navigateTo('leaderboard')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+            <i data-lucide="bar-chart-3" class="text-blue-400"></i>
+            <span class="font-semibold">Ranks</span>
+        </button>
+    </div>
+    <br>
+    <div class="space-y-6">
+        ${
+          latestAnnouncement
+            ? `
+        <div class="bg-gray-900/50 p-4 rounded-xl border-l-4 border-pink-500">
+            <div class="flex items-center justify-between mb-1">
+                <h3 class="font-bold text-lg text-pink-400">Announcement</h3>
+                <p class="text-xs text-gray-400">${latestAnnouncement.timestamp}</p>
+            </div>
+            <p class="text-gray-300">${latestAnnouncement.message}</p>
+        </div>`
+            : ""
+        }
+    </div>
+  `;
     },
     //LARO
     games: () => {
@@ -1596,15 +1825,24 @@ const App = function () {
                     )
                     .join("") ||
                   '<p class="text-gray-400 text-center py-4">No new users to verify.</p>'
-                }</div></div><div x-show="tab === 'events'"><div class="bg-gray-800 p-4 rounded-lg mb-4"><h3 class="font-semibold text-lg mb-4">Create New Event</h3><form id="create-event-form" class="space-y-4"><input name="eventName" type="text" placeholder="Event Name" required class="w-full bg-gray-700 rounded-lg p-3"><input name="eventDate" type="datetime-local" required class="w-full bg-gray-700 rounded-lg p-3 text-white"><textarea name="eventDescription" placeholder="Event Description (optional)" class="w-full bg-gray-700 rounded-lg p-3 h-24"></textarea><input name="eventPoints" type="number" placeholder="Points Value" required class="w-full bg-gray-700 rounded-lg p-3"><select name="badgeId" class="w-full bg-gray-700 rounded-lg p-3"><option value="">No Badge for this Event</option>${this.state.badges
-        .map((badge) => `<option value="${badge.id}">${badge.name}</option>`)
-        .join(
-          ""
-        )}</select><div class="flex items-center space-x-2"><input type="checkbox" id="event-visible" name="isVisible" checked class="h-5 w-5 rounded accent-pink-500"><label for="event-visible">Visible to Members</label></div><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Create Event</button></form></div><h3 class="font-semibold text-lg mb-4">Managed Events</h3><div id="events-list" class="space-y-2">${
+                }</div></div><div x-show="tab === 'events'"><div class="bg-gray-800 p-4 rounded-lg mb-4"><h3 class="font-semibold text-lg mb-4">Create New Event</h3><form id="create-event-form" class="space-y-4"><input name="eventName" type="text" placeholder="Event Name" required class="w-full bg-gray-700 rounded-lg p-3"><input name="eventDate" type="datetime-local" required class="w-full bg-gray-700 rounded-lg p-3 text-white"><textarea name="eventDescription" placeholder="Event Description (optional)" class="w-full bg-gray-700 rounded-lg p-3 h-24"></textarea><input name="eventPoints" type="number" placeholder="Points Value" required class="w-full bg-gray-700 rounded-lg p-3"><select name="badgeId" class="w-full bg-gray-700 rounded-lg p-3"><option value="">No Badge for this Event</option>
+                ${this.state.badges
+                  .map(
+                    (badge) =>
+                      `<option value="${badge.id}">${badge.name}</option>`
+                  )
+                  .join(
+                    ""
+                  )}</select><div class="flex items-center space-x-2"><input type="checkbox" id="event-visible" name="isVisible" checked class="h-5 w-5 rounded accent-pink-500"><label for="event-visible">Visible to Members</label></div><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Create Event</button></form></div><h3 class="font-semibold text-lg mb-4">Managed Events</h3><div id="events-list" class="space-y-2">${
         this.state.events
           .map(
             (event) =>
-              `<div class="bg-gray-700 p-3 rounded-lg flex items-center justify-between"><div><p class="font-semibold">${event.name}</p><p class="text-sm text-amber-400">${event.points} Points</p></div><button onclick="app.openEventDetailsModal('${event.id}')" class="text-xs text-pink-400 hover:underline">View Details</button></div>`
+              `<div class="bg-gray-700 p-3 rounded-lg flex items-center justify-between">
+              <div><p class="font-semibold">${event.name}</p>
+              <p class="text-sm text-amber-400">${event.points} Points</p>
+              </div><button onclick="app.openEventDetailsModal('${event.id}')" class="text-xs text-pink-400 hover:underline">View Details</button>
+              
+            </div>`
           )
           .join("") ||
         '<p class="text-gray-400 text-center">No events created.</p>'
@@ -1925,7 +2163,6 @@ const App = function () {
       }
       this.elements.loadingOverlay.classList.add("hidden");
     });
-    
   };
 
   // --- NEW FUNCTION: MANAGE PRESENCE ---
@@ -1973,12 +2210,11 @@ const App = function () {
         });
     });
   };
-  
 
   // --- REAL-TIME LISTENERS ---
   this.attachListeners = () => {
     // Listeners for data specific to the logged-in user
-   
+
     const userListener = onSnapshot(
       doc(this.fb.db, this.paths.userDoc(this.state.firebaseUser.uid)),
       (doc) => {
@@ -2125,7 +2361,7 @@ const App = function () {
 
       this.state.listeners.push(systemLogsListener);
     }
- 
+
     this.listenToUserChats();
   };
 
@@ -2195,8 +2431,6 @@ const App = function () {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     return lastSeenTime > fiveMinutesAgo;
   };
-
-
 
   this.updateNav = () => {
     document.querySelectorAll(".nav-button").forEach((btn) => {
@@ -3736,7 +3970,6 @@ const App = function () {
         theme: "default",
         lastSeen: firestoreServerTimestamp(),
         online: true,
-       
       };
       await setDoc(doc(this.fb.db, this.paths.userDoc(user.uid)), userProfile);
       this.state.loggedInUser = { id: user.uid, ...userProfile };
@@ -3751,8 +3984,8 @@ const App = function () {
   };
   this.handleLogout = async () => {
     // Set user to offline before signing out
-     await this.logAction("USER_LOGOUT", `User logged out.`);
-     await signOut(this.fb.auth);
+    await this.logAction("USER_LOGOUT", `User logged out.`);
+    await signOut(this.fb.auth);
     if (this.state.loggedInUser) {
       const userStatusFirestoreRef = doc(
         this.fb.db,
@@ -3771,7 +4004,6 @@ const App = function () {
         last_changed: serverTimestamp(),
       });
     }
-  
   };
 
   this.handleGoogleLogin = async () => {
@@ -5160,6 +5392,7 @@ const App = function () {
     }</div>`;
     this.openFullscreenModal("Points History", content);
   };
+
   this.openEventDetailsModal = async (eventId) => {
     const event = this.state.events.find((e) => e.id === eventId);
     if (!event) return;
@@ -5196,13 +5429,34 @@ const App = function () {
         ""
       )}</select></div><div class="flex items-center space-x-2"><input type="checkbox" id="event-visible-edit" name="isVisible" ${
       event.isVisible ? "checked" : ""
-    } class="h-5 w-5 rounded accent-pink-500"><label for="event-visible-edit">Visible to Members</label></div><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold mt-2">Save Event Changes</button><button type="button" onclick="app.handleAdminDeleteEvent('${
-      event.id
-    }')" class="w-full bg-red-500/20 text-red-400 py-3 rounded-lg font-semibold mt-2">Delete Event</button></form><div class="text-center"><p class="mb-2 font-semibold">Event QR Code</p><div class="bg-white p-2 rounded-xl max-w-xs mx-auto"><canvas id="detail-event-qr"></canvas></div></div></div><div x-show="tab === 'attendees'" style="display: none;"><div class="space-y-2">${
+    } class="h-5 w-5 rounded accent-pink-500"><label for="event-visible-edit">Visible to Members</label></div>
+      <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold mt-2">Save Event Changes</button>
+      <button type="button" onclick="app.handleAdminDeleteEvent('${
+        event.id
+      }')" class="w-full bg-red-500/20 text-red-400 py-3 rounded-lg font-semibold mt-2">Delete Event</button>
+    
+    
+    </form>
+     <button onclick="app.downloadAttendees('${event.id}', '${
+      event.name
+    }')" class="p-2 bg-green-500/20 text-green-400 rounded-md">
+    <i data-lucide="download" class="w-4 h-4"></i><span>Download Attendees</span>
+</button>
+    <div class="text-center">
+      <p class="mb-2 font-semibold">Event QR Code</p>
+        <div class="bg-white p-2 rounded-xl max-w-xs mx-auto"><canvas id="detail-event-qr">
+        </canvas></div></div></div>
+        
+    <div x-show="tab === 'attendees'" style="display: none;">
+     
+    <div class="space-y-2">${
       attendees
         .map(
           (a) =>
-            `<div class="bg-gray-700 p-3 rounded-lg"><div class="flex items-center justify-between"><p class="font-semibold">${a.user.firstName} ${a.user.lastName}</p><p class="text-xs text-gray-400">${a.timestamp}</p></div></div>`
+            `<div class="bg-gray-700 p-3 rounded-lg"><div class="flex items-center justify-between">
+     
+            <p class="font-semibold">${a.user.firstName} ${a.user.lastName}</p>
+            <p class="text-xs text-gray-400">${a.timestamp}</p></div></div>`
         )
         .join("") ||
       '<p class="text-center text-gray-400">No one has checked in yet.</p>'
