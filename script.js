@@ -568,19 +568,19 @@ const App = function () {
     }
   };
   // Opens a specific chat conversation
-  this.openChat = (chatId) => {
-    this.state.currentChatId = chatId;
-    this.detachChatListeners(); // Detach previous chat messages listener
-    this.listenToChatMessages(chatId); // Start listening to messages for this chat
-    this.navigateTo("messages"); // Navigate to the messages view
-    // Scroll to bottom of messages after rendering
-    setTimeout(() => {
-      const messagesContainer = document.getElementById("messages-container");
-      if (messagesContainer) {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }
-    }, 100); // Small delay to allow rendering
-  };
+  // this.openChat = (chatId) => {
+  //   this.state.currentChatId = chatId;
+  //   this.detachChatListeners(); // Detach previous chat messages listener
+  //   this.listenToChatMessages(chatId); // Start listening to messages for this chat
+  //   this.navigateTo("messages"); // Navigate to the messages view
+  //   // Scroll to bottom of messages after rendering
+  //   setTimeout(() => {
+  //     const messagesContainer = document.getElementById("messages-container");
+  //     if (messagesContainer) {
+  //       messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  //     }
+  //   }, 100); // Small delay to allow rendering
+  // };
 
   // Closes the active chat and returns to the chat list
   this.closeChat = () => {
