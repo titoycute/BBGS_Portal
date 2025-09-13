@@ -291,12 +291,12 @@ const App = function () {
       );
     }
     // --- END: ADDED SECTION ---
-
+  
     this.state.currentChatId = chatId;
     this.detachChatListeners(); // Remove old message listeners
     this.listenToChatMessages(chatId);
     this.navigateTo("messages");
-
+  
     setTimeout(() => {
       const messagesContainer = document.getElementById("messages-container");
       if (messagesContainer) {
@@ -567,23 +567,22 @@ const App = function () {
       this.openChat(newChatRef.id);
     }
   };
-  // Opens a specific chat conversation
-  // this.openChat = (chatId) => {
-  //   this.state.currentChatId = chatId;
-  //   this.detachChatListeners(); // Detach previous chat messages listener
-  //   this.listenToChatMessages(chatId); // Start listening to messages for this chat
-  //   this.navigateTo("messages"); // Navigate to the messages view
-  //   // Scroll to bottom of messages after rendering
-  //   setTimeout(() => {
-  //     const messagesContainer = document.getElementById("messages-container");
-  //     if (messagesContainer) {
-  //       messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  //     }
-  //   }, 100); // Small delay to allow rendering
-  // };
+  
 
   // Closes the active chat and returns to the chat list
   this.closeChat = () => {
+    // Check if there's a chat open and a logged-in user
+    const currentUser = this.state.loggedInUser;
+    const currentChatId = this.state.currentChatId;
+
+    if (currentUser && currentChatId) {
+      const chatRef = doc(this.fb.db, this.paths.chatDoc(currentChatId));
+      // Reset unread count for the current user when they close the chat
+      updateDoc(chatRef, {
+        [`unreadCount.${currentUser.id}`]: 0,
+      }).catch((error) => console.error("Error resetting unread count:", error));
+    }
+
     this.state.currentChatId = null;
     this.state.currentChatMessages = [];
     this.detachChatListeners(); // Detach messages listener
