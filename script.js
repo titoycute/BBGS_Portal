@@ -149,7 +149,7 @@ const App = function () {
 
     try {
       const newStreak = (this.state.loginReward.currentStreak % 5) + 1;
-      const pointsToAdd = DAILY_REWARD_POINTS[newStreak - 1]; 
+      const pointsToAdd = DAILY_REWARD_POINTS[newStreak - 1];
 
       // 1. Update the document in Firestore. This part was already working.
       await updateDoc(userRef, {
@@ -275,7 +275,23 @@ const App = function () {
   };
   // --- Chat Functionality ---
 
+  // In script.js, replace your first 'openChat' function with this
+
   this.openChat = (chatId) => {
+    // --- START: ADDED SECTION ---
+    // Reset unread count for the current user when they open the chat
+    const currentUser = this.state.loggedInUser;
+    if (currentUser && chatId) {
+      const chatRef = doc(this.fb.db, this.paths.chatDoc(chatId));
+      // We use dot notation to update a specific field in the map
+      updateDoc(chatRef, {
+        [`unreadCount.${currentUser.id}`]: 0,
+      }).catch((error) =>
+        console.error("Error resetting unread count:", error)
+      );
+    }
+    // --- END: ADDED SECTION ---
+
     this.state.currentChatId = chatId;
     this.detachChatListeners(); // Remove old message listeners
     this.listenToChatMessages(chatId);
@@ -532,6 +548,7 @@ const App = function () {
       this.openChat(existingChatId);
     } else {
       // Create new chat
+
       const newChatRef = await addDoc(
         collection(this.fb.db, this.paths.chats),
         {
@@ -540,6 +557,11 @@ const App = function () {
           type: "direct",
           lastMessage: "",
           lastMessageTimestamp: Timestamp.now(),
+          // --- ADD THIS OBJECT ---
+          unreadCount: {
+            [currentUser.id]: 0,
+            [targetUserId]: 0,
+          },
         }
       );
       this.openChat(newChatRef.id);
@@ -570,11 +592,32 @@ const App = function () {
   };
 
   // Sends a message in the current chat
+  // In script.js, replace your first 'sendMessage' function with this
+
   this.sendMessage = async (e) => {
     e.preventDefault();
     const messageText = e.target.elements.messageText.value.trim();
-    if (!messageText || !this.state.currentChatId || !this.state.loggedInUser)
+    if (!messageText || !this.state.currentChatId || !this.state.loggedInUser) {
       return;
+    }
+
+    const optimisticMessage = {
+      id: `temp_${Date.now()}`,
+      senderId: this.state.loggedInUser.id,
+      text: messageText,
+      timestamp: Timestamp.now(),
+    };
+
+    this.state.currentChatMessages.push(optimisticMessage);
+    e.target.reset();
+    this.render();
+
+    setTimeout(() => {
+      const messagesContainer = document.getElementById("messages-container");
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    }, 50);
 
     try {
       const chatRef = doc(
@@ -589,23 +632,41 @@ const App = function () {
         timestamp: Timestamp.now(),
       });
 
-      // Update the parent chat document with the last message
-      await updateDoc(chatRef, {
+      // --- START: MODIFIED SECTION ---
+      // Find the current chat to get participant info
+      const currentChat = this.state.chats.find(
+        (c) => c.id === this.state.currentChatId
+      );
+      if (!currentChat) {
+        console.error("Could not find chat to update unread counts.");
+        return;
+      }
+
+      const otherParticipants = currentChat.participants.filter(
+        (pId) => pId !== this.state.loggedInUser.id
+      );
+
+      // Prepare the updates for the parent chat document
+      const updates = {
         lastMessage: messageText,
         lastMessageTimestamp: Timestamp.now(),
+      };
+
+      // Increment the unread count for every other participant
+      otherParticipants.forEach((pId) => {
+        updates[`unreadCount.${pId}`] = increment(1);
       });
 
-      e.target.reset(); // Clear input field
-      // Scroll to bottom after sending
-      setTimeout(() => {
-        const messagesContainer = document.getElementById("messages-container");
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-      }, 50);
+      await updateDoc(chatRef, updates);
+      // --- END: MODIFIED SECTION ---
     } catch (error) {
       console.error("Error sending message:", error);
       this.showModal("error", "Message Error", "Failed to send message.");
+
+      this.state.currentChatMessages = this.state.currentChatMessages.filter(
+        (msg) => msg.id !== optimisticMessage.id
+      );
+      this.render();
     }
   };
 
@@ -817,6 +878,9 @@ const App = function () {
                     (b.lastMessageTimestamp?.toDate() || 0) -
                     (a.lastMessageTimestamp?.toDate() || 0)
                 )
+                // In script.js, inside this.templates.messages
+
+                // ...
                 .map((chat) => {
                   const otherParticipantId = chat.participants.find(
                     (pId) => pId !== user.id
@@ -826,40 +890,65 @@ const App = function () {
                   );
                   if (!chatUser) return "";
 
+                  // --- START: MODIFIED SECTION ---
+                  // 1. Get the unread count for the logged-in user
+                  const unreadCount = chat.unreadCount
+                    ? chat.unreadCount[user.id] || 0
+                    : 0;
+
+                  // 2. Truncate the last message preview
+                  const messageText =
+                    chat.lastMessage || "Start a conversation...";
+                  const truncatedMessage =
+                    messageText.length > 28
+                      ? messageText.substring(0, 28) + "..."
+                      : messageText;
+
                   return `
-                   <div onclick="app.openChat('${
-                     chat.id
-                   }')" class="bg-gray-700 p-3 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-gray-600">
-                    <div class="relative">
-                        <img src="${
-                          chatUser.profilePic
-                        }" class="w-12 h-12 rounded-full object-cover">
-                        <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${
-                          this.isUserOnline(chatUser.lastSeen)
-                            ? "bg-green-400"
-                            : "bg-gray-500"
-                        }"></div>
-                    </div>
-                    <div class="flex-1">
-                      <p class="font-semibold">${chatUser.firstName} ${
+       <div onclick="app.openChat('${
+         chat.id
+       }')" class="bg-gray-700 p-3 rounded-lg flex items-center space-x-3 cursor-pointer hover:bg-gray-600">
+        <div class="relative">
+            <img src="${
+              chatUser.profilePic
+            }" class="w-12 h-12 rounded-full object-cover">
+            <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${
+              this.isUserOnline(chatUser.lastSeen)
+                ? "bg-green-400"
+                : "bg-gray-500"
+            }"></div>
+        </div>
+        <div class="flex-1 overflow-hidden">
+          <p class="font-semibold">${chatUser.firstName} ${
                     chatUser.lastName
                   }</p>
-                      <p class="text-sm text-gray-400 truncate">${
-                        chat.lastMessage || "Start a conversation..."
-                      }</p>
-                    </div>
-                    ${
-                      chat.lastMessageTimestamp
-                        ? `<p class="text-xs text-gray-500">${this.formatTimestamp(
-                            chat.lastMessageTimestamp
-                          )}</p>`
-                        : ""
-                    }
-                  </div>
-                `;
+          <p class="text-sm ${
+            unreadCount > 0 ? "text-white font-bold" : "text-gray-400"
+          } truncate">${truncatedMessage}</p>
+        </div>
+        <div class="flex flex-col items-end space-y-1 text-xs">
+            ${
+              chat.lastMessageTimestamp
+                ? `<p class="text-gray-500 whitespace-nowrap">${this.formatTimestamp(
+                    chat.lastMessageTimestamp
+                  )}</p>`
+                : ""
+            }
+            ${
+              unreadCount > 0
+                ? `<span class="bg-pink-500 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center">${
+                    unreadCount > 9 ? "9+" : unreadCount
+                  }</span>`
+                : ""
+            }
+        </div>
+      </div>
+    `;
+                  // --- END: MODIFIED SECTION ---
                 })
                 .join("")
-            : '<p class="text-center text-gray-400 py-8">No conversations yet. Start one from the directory!</p>'
+            : // ...
+              '<p class="text-center text-gray-400 py-8">No conversations yet. Start one from the directory!</p>'
         }
       </div>
 
