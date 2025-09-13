@@ -966,7 +966,7 @@ const App = function () {
     src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed" >
   </iframe>
 </div>
-<a href="https:&#x2F;&#x2F;www.canva.com&#x2F;design&#x2F;DAGyyOxfOro&#x2F;C22eWaeHJAsyy3SSkP89vA&#x2F;watch?utm_content=DAGyyOxfOro&amp;utm_campaign=designshare&amp;utm_medium=embeds&amp;utm_source=link" target="_blank" rel="noopener">Design</a> by Tito Amerigo Custodio Jr.
+
 
                             
                         </form>
@@ -1637,7 +1637,6 @@ const App = function () {
     src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
   </iframe>
 </div>
-<a href="https:&#x2F;&#x2F;www.canva.com&#x2F;design&#x2F;DAGyyOxfOro&#x2F;C22eWaeHJAsyy3SSkP89vA&#x2F;watch?utm_content=DAGyyOxfOro&amp;utm_campaign=designshare&amp;utm_medium=embeds&amp;utm_source=link" target="_blank" rel="noopener">What is</a> by Tito Amerigo Custodio Jr.
 
                 <p class="text-center text-xs text-gray-500 pt-4">App Version 2.0.2 (BBGS Pride Pass QR Code System) <br> © 2025 BBGS Dev Tootz </p>
             </div>
