@@ -85,6 +85,7 @@
           />
           <h1 class="text-xl font-bold pride-gradient-text">Pride Pass</h1>
         </div>
+
         <div x-data="{ open: false }" class="relative">
           <button @click="open = !open" class="flex items-center space-x-2">
             <div class="text-right">
@@ -207,6 +208,7 @@
           >
             <i data-lucide="gift"></i><span class="text-xs mt-1">Reward List</span>
           </button>
+          
           <button
             onclick="app.navigateTo('badges')"
             class="nav-button flex-1 flex flex-col items-center p-2 rounded-lg text-gray-400 hover:bg-gray-700 transition-colors"

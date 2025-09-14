@@ -52,6 +52,44 @@ import {
 const DAILY_REWARD_POINTS = [10, 15, 20, 25, 100]; // Day 1, Day 2, Day 3, Day 4, Day 5
 const App = function () {
 
+  // in script.js, inside the App function
+
+// in script.js, replace the existing scrollCarousel function
+
+this.scrollCarousel = (direction) => {
+  const carousel = document.getElementById('dashboard-carousel');
+  if (carousel) {
+      const scrollAmount = carousel.clientWidth * direction;
+
+      // Check if the carousel is at the very end
+      // We add a small buffer (1px) to account for potential decimal values
+      const isAtEnd = carousel.scrollLeft + carousel.clientWidth >= carousel.scrollWidth - 1;
+
+      // Check if the carousel is at the very beginning
+      const isAtStart = carousel.scrollLeft === 0;
+
+      if (direction === 1 && isAtEnd) {
+          // If scrolling right at the end, loop to the beginning
+          carousel.scrollTo({
+              left: 0,
+              behavior: 'smooth'
+          });
+      } else if (direction === -1 && isAtStart) {
+          // If scrolling left at the beginning, loop to the end
+          carousel.scrollTo({
+              left: carousel.scrollWidth,
+              behavior: 'smooth'
+          });
+      } else {
+          // Otherwise, just scroll normally
+          carousel.scrollBy({
+              left: scrollAmount,
+              behavior: 'smooth'
+          });
+      }
+  }
+};
+
   this.aboutAudio = null; 
   // --- STATE MANAGEMENT ---
   const currentDate = new Date();
@@ -97,7 +135,165 @@ const App = function () {
     firstVisibleMessage: null,
     allMessagesLoaded: false,
     dailyRewardTimerId: null,
+
   };
+
+
+
+//PROFILE CARD
+this.renderDashboardProfile = (user) => {
+  const earnedBadges = (user.earnedBadgeIds || [])
+    .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
+    .filter(Boolean)
+    .slice(0, 10);
+
+  return `
+    <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
+        <div class="bg-gray-800 rounded-xl p-4 space-y-4">
+            <div class="flex space-x-4 items-center">
+                <img src="${user.profilePic}" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
+                <div class="flex-1">
+                    <h2 class="text-l font-bold">${user.firstName} ${user.lastName}</h2>
+                    <div class="flex items-center text-2xl font-bold pride-gradient-text mb-1">
+                        <i data-lucide="circle-star" class="w-7 h-7 mr-2 pride-gradient-text"></i>
+                        <span>${user.points || 0}</span><span class="text-sm pride-gradient-text ml-1"> PTS</span>
+                    </div>
+                    <p class="text-sm text-gray-400">${user.email || "N/A"}</p>
+                </div>
+                <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
+                    <canvas id="member-qr-code"></canvas>
+                </div>
+            </div>
+            ${
+              earnedBadges.length > 0
+                ? `
+            <div class="border-t border-gray-700 pt-3">
+                <div class="flex items-center justify-center space-x-3">
+                    ${earnedBadges
+                      .map((badge) =>
+                        this.renderBadgeIcon(badge.icon, "w-6 h-6 text-amber-400")
+                      )
+                      .join("")}
+                </div>
+            </div>`
+                : ""
+            }
+        </div>
+    </div>`;
+};
+
+// DASHBOARD CAROUSEL
+this.renderDashboardCarousel = () => {
+  const carouselItems = [
+    { imageUrl: "https://i.pinimg.com/1200x/88/fb/55/88fb55aef79b73ac452880924c6f2f14.jpg", link: "dashboard" },
+    { imageUrl: "https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=3840&h=1920&q=90%203840w,%20https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=7680&h=3840&q=90%207680w", link: "dashboard" },
+    { imageUrl: "https://i.pinimg.com/736x/c0/7e/3f/c07e3f15759523f0c9a5fdead7db5033.jpg", link: "dashboard" }
+  ];
+
+  return `
+    <div class="relative w-full">
+        <div class="carousel-container" id="dashboard-carousel">
+            ${carouselItems.map(item => `
+                <div class="carousel-item" 
+                     style="background-image: url('${item.imageUrl}')" 
+                     onclick="app.navigateTo('${item.link}')">
+                </div>
+            `).join('')}
+        </div>
+        <button onclick="app.scrollCarousel(-1)" class="carousel-arrow left-0"><i data-lucide="chevron-left"></i></button>
+        <button onclick="app.scrollCarousel(1)" class="carousel-arrow right-0"><i data-lucide="chevron-right"></i></button>
+    </div>
+  `;
+};
+
+//DAILY REWARDS
+this.renderDashboardDailyRewards = () => {
+  this.prepareLoginRewardState(this.state.loggedInUser);
+  const rewardState = this.state.loginReward || { currentStreak: 0, canClaim: false };
+
+  const rewardBoxes = [1, 2, 3, 4, 5].map((day) => {
+    const isClaimed = day <= rewardState.currentStreak;
+    const isClaimable = rewardState.canClaim && day === rewardState.currentStreak + 1;
+    const points = DAILY_REWARD_POINTS[day - 1];
+    
+    let boxClass = "bg-gray-700/50 border-2 border-gray-600";
+    let content = `<div class="font-bold text-gray-400">${day}</div><div class="text-xs text-gray-500">${points} pts</div>`;
+    let onClick = "";
+
+    if (isClaimed) {
+        boxClass = "bg-yellow-500/30 border-2 border-yellow-500";
+        content = `<i data-lucide="check-circle" class="w-8 h-8 text-yellow-400 mx-auto"></i>`;
+    } else if (isClaimable) {
+        boxClass = "bg-green-500/30 border-2 border-green-500 cursor-pointer animate-pulse";
+        content = `<div class="font-bold text-white">Claim</div><div class="text-xs text-green-300">${points} pts</div>`;
+        onClick = `onclick="app.claimDailyReward()"`;
+    }
+
+    return `<div class="rounded-lg p-2 aspect-square flex flex-col justify-center items-center ${boxClass}" ${onClick}>${content}</div>`;
+  }).join("");
+
+  return `
+    <div class="mb-4">
+        <h3 class="text-lg font-bold text-white mb-2">Daily Rewards</h3>
+        <div class="grid grid-cols-5 gap-2 text-center">
+            ${rewardBoxes}
+        </div>
+    </div>`;
+};
+
+//DASHBOARD BUTTONS
+this.renderDashboardActions = () => {
+    return `
+    <div class="grid grid-cols-3 gap-3"> 
+          <button onclick="app.navigateTo('scanner')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+              <i data-lucide="scan-line" class="text-pink-400"></i>
+              <span class="font-semibold text-xs">Scan QR Code</span>
+          </button>
+          <button onclick="app.navigateTo('profile')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+              <i data-lucide="user-circle" class="text-purple-400"></i>
+              <span class="font-semibold text-xs">My Profile</span>
+          </button>
+          <button onclick="app.navigateTo('facebookFeed')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+              <i data-lucide="facebook" class="text-blue-400"></i>
+              <span class="font-semibold text-xs">BBGS Updates</span>
+          </button>
+          <button onclick="app.navigateTo('qrSpots')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+              <i data-lucide="map-pin" class="text-green-400"></i>
+              <span class="font-semibold text-xs">QR Spots</span>
+          </button>
+          <button onclick="app.navigateTo('directory')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+              <i data-lucide="users" class="text-purple-400"></i>
+              <span class="font-semibold text-xs">Members Directory</span>
+          </button>
+          <button onclick="app.navigateTo('leaderboard')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+              <i data-lucide="bar-chart-3" class="text-blue-400"></i>
+              <span class="font-semibold text-xs">Ranks</span>
+          </button>
+          <button onclick="app.navigateTo('announcements')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+              <i data-lucide="megaphone" class="text-blue-400"></i>
+              <span class="font-semibold text-xs">Announcement</span>
+          </button>
+      </div>
+    `;
+};
+
+/**
+ * Renders the latest announcement for the dashboard.
+ */
+this.renderDashboardAnnouncement = () => {
+    const latestAnnouncement = this.state.announcements[0];
+    if (!latestAnnouncement) return "";
+
+    return `
+      <div class="bg-gray-900/50 p-4 rounded-xl border-l-4 border-pink-500">
+          <div class="flex items-center justify-between mb-1">
+              <h3 class="font-bold text-lg text-pink-400">Latest Announcement</h3>
+              <p class="text-xs text-gray-400">${latestAnnouncement.timestamp}</p>
+          </div>
+          <p class="text-gray-300">${latestAnnouncement.message}</p>
+      </div>
+    `;
+};
 
   // Add these new functions inside your App function in script.js
 
@@ -860,6 +1056,43 @@ this.stopDailyRewardTimer = () => {
 
   // --- TEMPLATES / VIEWS ---
   this.templates = {
+
+
+// ANNOUNCEMENT PAGE
+announcements: () => {
+  const announcementsHTML = this.state.announcements.map(ann => {
+    // Format the timestamp to a readable date
+    const date = ann.timestamp?.toDate ? ann.timestamp.toDate().toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    }) : 'No date';
+
+    return `
+      <div class="announcement-item" onclick="app.toggleAnnouncement(this)">
+          <div class="announcement-header">
+              <div>
+                  <p class="text-xs text-gray-400 mt-1">${ann.timestamp}</p>
+              </div>
+          <div class="announcement-content">
+              <div class="border-t border-gray-600 my-3"></div>
+              <p class="text-sm text-gray-200 whitespace-pre-wrap">${ann.message}</p>
+          </div>
+      </div>
+    `
+  }).join('');
+
+  return `
+      <div class="p-4">
+          <h1 class="text-2xl font-bold text-center mb-6">List of Announcements</h1>
+          <div class="space-y-3">
+              ${announcementsHTML.length > 0 ? announcementsHTML : '<p class="text-center text-gray-400">No announcements found.</p>'}
+          </div>
+      </div>
+  `;
+},
+
+
+
+   // MESSAGE PAGE
     messages: () => {
       console.log("Rendering messages template");
       console.log("Chats:", this.state.chats);
@@ -1080,6 +1313,9 @@ this.stopDailyRewardTimer = () => {
   `;
     },
 
+
+//LOGIN PAGE
+
     auth: () => `
             <div class="relative h-full">
                 <div class="absolute top-0 right-0">
@@ -1102,25 +1338,64 @@ this.stopDailyRewardTimer = () => {
 
 
 
-<div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%;
- padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;
- border-radius: 8px; will-change: transform;">
-  <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
-    src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1">
-  </iframe>
-</div>
-
-
-                            
-                        </form>
+                      <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%;
+                      padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;
+                      border-radius: 8px; will-change: transform;">
+                        <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
+                          src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1">
+                        </iframe>
+                      </div>                            
+                    </form>
                     </div>
                     <div x-show="tab === 'register'" style="display: none;"><form id="register-form" class="space-y-4 p-4"><div class="grid grid-cols-2 gap-4"><input name="firstName" type="text" placeholder="First Name*" required class="w-full bg-gray-700 rounded-lg p-3"><input name="lastName" type="text" placeholder="Last Name*" required class="w-full bg-gray-700 rounded-lg p-3"><input name="middleName" type="text" placeholder="Middle Name" class="w-full bg-gray-700 rounded-lg p-3"><input name="suffix" type="text" placeholder="Suffix" class="w-full bg-gray-700 rounded-lg p-3"></div><input name="skills" type="text" placeholder="Skills/Talents (e.g., Host, Singer)" required class="w-full bg-gray-700 rounded-lg p-3"><input name="contact" type="tel" placeholder="Contact Number*" required class="w-full bg-gray-700 rounded-lg p-3"><input name="social" type="text" placeholder="Social Media Address" class="w-full bg-gray-700 rounded-lg p-3"><input name="email" type="email" placeholder="Email Address*" required class="w-full bg-gray-700 rounded-lg p-3"><input name="password" type="password" placeholder="Password*" required class="w-full bg-gray-700 rounded-lg p-3"><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Create My Account</button></form></div>
                 </div>
             </div>`,
 
-    // Replace your existing dashboard template with this one
+    //DASHBOARD
 
     dashboard: () => {
+
+      //CAROUSEL IMAGE OR PICTURE
+      const carouselItems = [
+        {
+            imageUrl: "https://i.pinimg.com/1200x/88/fb/55/88fb55aef79b73ac452880924c6f2f14.jpg", // Replace with your image URL
+            link: "dashboard"
+        },
+        {
+            imageUrl: "https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=3840&h=1920&q=90%203840w,%20https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=7680&h=3840&q=90%207680w", // Replace with your image URL
+            link: "dashboard"
+        },
+        {
+            imageUrl: "https://i.pinimg.com/736x/c0/7e/3f/c07e3f15759523f0c9a5fdead7db5033.jpg", // Replace with your image URL
+            link: "dashboard"
+        }
+    ];
+
+    // --- Generate the HTML for the carousel ---
+    const carouselHTML = `
+   <!--     <div class="px-4 pt-4">
+             <h2 class="text-xl font-bold mb-3">Discover More</h2>
+        </div> -->
+        <div class="relative w-full">
+            <div class="carousel-container" id="dashboard-carousel">
+                ${carouselItems.map(item => `
+                    <div class="carousel-item" 
+                         style="background-image: url('${item.imageUrl}')" 
+                         onclick="app.navigateTo('${item.link}')">
+                    </div>
+                `).join('')}
+            </div>
+            
+            <button onclick="app.scrollCarousel(-1)" class="carousel-arrow left-0">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            
+            <button onclick="app.scrollCarousel(1)" class="carousel-arrow right-0">
+                <i data-lucide="chevron-right"></i>
+            </button>
+        </div>
+    `;
+
       const user = this.state.loggedInUser;
       if (!user.isValidated) {
         return `
@@ -1178,6 +1453,13 @@ this.stopDailyRewardTimer = () => {
         .slice(0, 10); // Show max 10 badges
 
       return `
+
+        ${carouselHTML}
+
+
+
+
+
     <div class="mb-4">
       <h3 class="text-lg font-bold text-white mb-2">Daily Rewards</h3>
       <div class="grid grid-cols-5 gap-2 text-center">
@@ -1185,6 +1467,9 @@ this.stopDailyRewardTimer = () => {
       </div>
     </div>
 
+
+
+    
 
     <!-- CARD LIKE CONTAINER -->
     <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
@@ -1275,6 +1560,37 @@ this.stopDailyRewardTimer = () => {
     </div>
   `;
     },
+
+// in script.js, inside the this.templates object
+
+dashboard: () => {
+  const user = this.state.loggedInUser;
+
+  if (!user.isValidated) {
+      return `
+        <div class="text-center p-6 bg-gray-900/50 rounded-xl">
+            <i data-lucide="shield-alert" class="w-16 h-16 mx-auto text-amber-400 mb-4"></i>
+            <h2 class="text-2xl font-bold mb-2">Account Pending Approval</h2>
+            <p class="text-gray-400">Your account is registered. An administrator will review it shortly, granting full access upon approval.</p>
+        </div>
+      `;
+  }
+
+  // This part remains the same and now works perfectly with your coding style
+  return `
+    <div class="space-y-4">
+    
+      ${this.renderDashboardCarousel()}
+      ${this.renderDashboardDailyRewards()}
+      ${this.renderDashboardProfile(user)}
+      ${this.renderDashboardActions()}
+      ${this.renderDashboardAnnouncement()}
+      
+    </div>
+  `;
+},
+
+
     //LARO
     games: () => {
       const gamesList = [
@@ -1316,6 +1632,8 @@ this.stopDailyRewardTimer = () => {
     `;
     },
 
+
+
     facebookFeed: () => `
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold">Facebook Updates</h2>
@@ -1338,6 +1656,9 @@ this.stopDailyRewardTimer = () => {
                 </div>
             </div>
         `,
+
+
+
     events: () => {
       return `
             <div x-data="{ view: 'calendar' }">
@@ -1411,6 +1732,9 @@ this.stopDailyRewardTimer = () => {
             </div>
             `;
     },
+
+
+    
     rewards: () => {
       return `
             <h2 class="text-2xl font-bold text-center mb-6">Available Rewards</h2>
@@ -1600,7 +1924,9 @@ this.stopDailyRewardTimer = () => {
   </div>
   <div class="flex-1">
     <p class="font-bold">${user.firstName} ${user.lastName}</p>
-    <p class="text-sm text-gray-400">${user.skills || "No skills listed"}</p>
+    <p class="text-sm text-gray-400">
+  ${user.skills && user.skills.length > 25 ? user.skills.substring(0, 25) + '...' : user.skills || 'No skills listed'}
+</p>
   </div>
   
                 <div class="flex space-x-1">
@@ -1780,13 +2106,14 @@ this.stopDailyRewardTimer = () => {
 
                 </div>
 
-                <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%;
+                <div style="position: relative; width: 100%; height: 0; padding-top: 177.7778%;
  padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;
  border-radius: 8px; will-change: transform;">
   <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
-    src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
+    src="https://www.canva.com/design/DAGy3ERSjCo/4e2CdzmxIShB6KdG7Jui2w/view?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
   </iframe>
 </div>
+
 
                 <p class="text-center text-xs text-gray-500 pt-4">App Version 2.0.2 (BBGS Pride Pass QR Code System) <br> © 2025 BBGS Dev Tootz </p>
             </div>
@@ -2180,11 +2507,11 @@ this.stopDailyRewardTimer = () => {
           )
           .join("") ||
         '<p class="text-gray-400 text-center">No badges created.</p>'
-      }</div></div><div x-show="tab === 'announcements'" style="display: none;"><div class="bg-gray-800 p-4 rounded-lg mb-4"><h3 class="font-semibold text-lg mb-4">Post New Announcement</h3><form id="create-announcement-form" class="space-y-4"><textarea name="announcementMessage" placeholder="Your message here..." required class="w-full bg-gray-700 rounded-lg p-3 h-28"></textarea><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Post Announcement</button></form></div><h3 class="font-semibold text-lg mb-2">Recent Announcements</h3><div class="space-y-2">${
-        this.state.announcements
-          .map(
-            (item) =>
-              `<div class="bg-gray-700 p-3 rounded-lg"> <p>${item.message}</p> <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-600"> <p class="text-xs text-gray-400">${item.timestamp}</p> <button onclick="app.handleDeleteAnnouncement('${item.id}')" class="p-1 text-red-400 hover:bg-red-900/50 rounded-md"><i data-lucide="trash-2" class="w-4 h-4"></i></button> </div> </div>`
+      }</div></div><div x-show="tab === 'announcements'" style="display: none;"><div class="bg-gray-800 p-4 rounded-lg mb-4"><h3 class="font-semibold text-lg mb-4">Post New Announcement</h3><form id="create-announcement-form" class="space-y-4"><textarea name="announcementMessage" placeholder="Your message here..." required class="w-full bg-gray-700 rounded-lg p-3 h-28"></textarea><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Post Announcement</button></form></div>
+      <h3 class="font-semibold text-lg mb-2">Recent An    nouncements</h3>
+      <div class="space-y-2">${this.state.announcements.map((item) =>
+              `<div class="bg-gray-700 p-3 rounded-lg"> <p>${item.message}</p> <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-600"> <p class="text-xs text-gray-400">${item.timestamp}</p> 
+              <button onclick="app.handleDeleteAnnouncement('${item.id}')" class="p-1 text-red-400 hover:bg-red-900/50 rounded-md"><i data-lucide="trash-2" class="w-4 h-4"></i></button> </div> </div>`
           )
           .join("") ||
         '<p class="text-gray-400 text-center">No announcements yet.</p>'
@@ -2274,6 +2601,39 @@ this.stopDailyRewardTimer = () => {
     },
   };
 
+
+//FETCH ANNOUNCEMENT
+
+this.fetchAnnouncements = async () => {
+  try {
+    const { getFirestore, collection, query, getDocs, orderBy } = this.fb;
+    const db = getFirestore();
+    const announcementsRef = collection(db, "announcements");
+    // Order by timestamp to show the newest announcements first
+    const q = query(announcementsRef, orderBy("timestamp", "desc"));
+
+    const querySnapshot = await getDocs(q);
+    const announcementsData = [];
+    querySnapshot.forEach((doc) => {
+      announcementsData.push({ id: doc.id, ...doc.data() });
+    });
+
+    this.state.announcements = announcementsData;
+    console.log("Announcements loaded successfully.");
+  } catch (error) {
+    console.error("Error fetching announcements:", error);
+  }
+};
+
+/**
+ * Toggles the expanded state of an announcement item.
+ */
+this.toggleAnnouncement = (element) => {
+    element.classList.toggle('expanded');
+};
+
+
+
   // --- FIREBASE INITIALIZATION ---
   this.init = async () => {
     // Your web app's Firebase configuration
@@ -2311,7 +2671,9 @@ this.stopDailyRewardTimer = () => {
           doc(this.fb.db, this.paths.userDoc(user.uid))
         );
         if (userDoc.exists()) {
+          
           this.state.loggedInUser = { id: user.uid, ...userDoc.data() };
+          await this.fetchAnnouncements(); 
           this.elements.appHeader.classList.remove("hidden");
           this.elements.appNav.classList.remove("hidden");
           this.applyTheme(this.state.loggedInUser.theme);
@@ -2326,6 +2688,7 @@ this.stopDailyRewardTimer = () => {
       } else {
         this.state.firebaseUser = null;
         this.state.loggedInUser = null;
+        this.state.announcements = []; 
         this.elements.appHeader.classList.add("hidden");
         this.elements.appNav.classList.add("hidden");
         this.applyTheme("default");
@@ -2593,7 +2956,7 @@ this.stopDailyRewardTimer = () => {
       this.state.leaderboardLoading = false; // Reset the loading flag
     }
 
-    
+
     if (this.aboutAudio) {
       this.aboutAudio.pause();
       this.aboutAudio.currentTime = 0;
@@ -4650,6 +5013,7 @@ this.stopDailyRewardTimer = () => {
     e.target.reset();
     this.state.adminActiveTab = "rewards";
   };
+
   this.handleCreateAnnouncement = async (e) => {
     e.preventDefault();
     const message = e.target.elements.announcementMessage.value;
@@ -4662,6 +5026,8 @@ this.stopDailyRewardTimer = () => {
       this.state.adminActiveTab = "announcements";
     }
   };
+  
+
   this.handleDeleteAnnouncement = async (id) => {
     await deleteDoc(doc(this.fb.db, this.paths.announcements, id));
   };
