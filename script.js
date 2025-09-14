@@ -51,6 +51,8 @@ import {
 // --- Main Application Logic ---
 const DAILY_REWARD_POINTS = [10, 15, 20, 25, 100]; // Day 1, Day 2, Day 3, Day 4, Day 5
 const App = function () {
+
+  this.aboutAudio = null; 
   // --- STATE MANAGEMENT ---
   const currentDate = new Date();
   this.state = {
@@ -94,6 +96,7 @@ const App = function () {
     calendarDate: new Date(),
     firstVisibleMessage: null,
     allMessagesLoaded: false,
+    dailyRewardTimerId: null,
   };
 
   // Add these new functions inside your App function in script.js
@@ -188,6 +191,56 @@ const App = function () {
       );
     }
   };
+
+  // Add this new function to handle the timer logic
+this.startDailyRewardTimer = () => {
+  // Stop any existing timer to prevent multiple timers running at once
+  if (this.state.dailyRewardTimerId) {
+      clearInterval(this.state.dailyRewardTimerId);
+  }
+
+  const timerElement = document.getElementById("daily-reward-timer");
+  if (!timerElement) {
+      return; // Exit if the timer element isn't on the page
+  }
+
+  const updateTimer = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0); // Midnight of the next day
+
+      const timeRemaining = tomorrow - now;
+
+      if (timeRemaining <= 0) {
+          clearInterval(this.state.dailyRewardTimerId);
+          this.state.dailyRewardTimerId = null;
+          this.render("dashboard"); // Re-render the dashboard to show the "Claim" button
+          return;
+      }
+
+      const hours = Math.floor((timeRemaining / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((timeRemaining / (1000 * 60)) % 60);
+      const seconds = Math.floor((timeRemaining / 1000) % 60);
+
+      const formattedTime =
+          `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      timerElement.textContent = `Next reward in: ${formattedTime}`;
+  };
+
+  // Run immediately and then every second
+  updateTimer();
+  this.state.dailyRewardTimerId = setInterval(updateTimer, 1000);
+};
+
+// Add this function to stop the timer
+this.stopDailyRewardTimer = () => {
+  if (this.state.dailyRewardTimerId) {
+      clearInterval(this.state.dailyRewardTimerId);
+      this.state.dailyRewardTimerId = null;
+  }
+};
 
   // Replace your old downloadAttendees function with this one
   this.downloadAttendees = async (eventId, eventName) => {
@@ -1047,11 +1100,13 @@ const App = function () {
                             <input name="password" type="password" placeholder="Password" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
                             <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95">Log In</button>
 
+
+
 <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%;
  padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;
  border-radius: 8px; will-change: transform;">
   <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
-    src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed" >
+    src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1">
   </iframe>
 </div>
 
@@ -1129,6 +1184,9 @@ const App = function () {
         ${renderRewardBoxes()}
       </div>
     </div>
+
+
+    <!-- CARD LIKE CONTAINER -->
     <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
         <div class="bg-gray-800 rounded-xl p-4 space-y-4">
             <div class="flex space-x-4 items-center">
@@ -1136,16 +1194,18 @@ const App = function () {
                   user.profilePic
                 }" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
                 <div class="flex-1">
-                    <h2 class="text-xl font-bold">${user.firstName} ${
-        user.lastName
-      }</h2>
-                    <p class="text-sm text-gray-400">Member Since: ${
-                      user.memberSince || "N/A"
-                    }</p>
+                    <h2 class="text-l font-bold">${user.firstName} ${ user.lastName}</h2>
+                <div class="flex items-center  text-2xl font-bold pride-gradient-text mb-1">
+                    <i data-lucide="circle-star" class="w-7 h-7 mr-2 pride-gradient-text"></i>
+                    <span>${user.points || 0}</span><span class="text-sm pride-gradient-text ml-1"> PTS</span>
                 </div>
+                    <p class="text-sm text-gray-400"> ${ user.email || "N/A"   }</p>
+                </div>
+
                 <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
                     <canvas id="member-qr-code"></canvas>
                 </div>
+
             </div>
             ${
               earnedBadges.length > 0
@@ -1166,6 +1226,8 @@ const App = function () {
             }
         </div>
     </div>
+
+            
     <br>
     <div class="grid grid-cols-2 gap-4">
         <button onclick="app.navigateTo('scanner')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
@@ -2492,6 +2554,8 @@ const App = function () {
   this.navigateTo = (page) => {
     // Remove any existing scroll listener from the previous page
     this.elements.mainContent.onscroll = null;
+   
+  
 
     if (this.state.currentPage === "scanner" && this.qrScanner)
       this.stopScanner();
@@ -2508,6 +2572,8 @@ const App = function () {
         "This feature is available after your account is approved by an admin."
       );
     }
+
+
 
     if (page === "admin") {
       this.fetchAllRewardsForAdmin();
@@ -2527,10 +2593,26 @@ const App = function () {
       this.state.leaderboardLoading = false; // Reset the loading flag
     }
 
+    
+    if (this.aboutAudio) {
+      this.aboutAudio.pause();
+      this.aboutAudio.currentTime = 0;
+      this.aboutAudio = null;
+    }
+    if (page === 'about') {  
+      // --- If user IS logged in, play audio and navigate normally ---
+      this.aboutAudio = new Audio("NoteGPT_Speech_1757811715642.mp3");
+      this.aboutAudio.play();
+    }
+
+ 
+
     this.updateNav();
     this.state.currentPage = page;
     this.render();
   };
+
+  
 
   // 5minutes Online
   this.isUserOnline = (timestamp) => {
@@ -3951,6 +4033,9 @@ const App = function () {
       }
     });
   };
+
+
+  this.aboutSound = new Audio("NoteGPT_Speech_1757811715642.mp3");
 
   this.fetchRewards = async () => {
     if (this.state.rewardsLoading || this.state.rewardsAllLoaded) return;
