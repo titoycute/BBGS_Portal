@@ -234,48 +234,64 @@ this.renderDashboardProfile = (user) => {
     .slice(0, 10);
 
   return `
-    <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
-        <div class="bg-gray-800 rounded-xl p-4 space-y-4">
-            <div class="flex space-x-4 items-center">
-                <img src="${user.profilePic}" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
-                <div class="flex-1">
-                    <h2 class="text-l font-bold">${user.firstName} ${user.lastName}</h2>
-                    <div class="flex items-center text-2xl font-bold pride-gradient-text mb-1">
-                        <i data-lucide="circle-star" class="w-7 h-7 mr-2 pride-gradient-text"></i>
-                        <span>${user.points || 0}</span><span class="text-sm pride-gradient-text ml-1"> PTS</span>
+    <div class="relative">
+        
+        <!-- START: This is the new glow element -->
+        <div class="absolute -inset-1.5 pride-gradient-bg rounded-2xl blur-lg opacity-75"></div>
+        <!-- END: New glow element -->
+
+        <!-- Your original card, now with position: relative to sit on top -->
+        <div class="relative pride-gradient-bg p-1 rounded-2xl shadow-lg">
+            <div class="bg-gray-800 rounded-xl p-4 space-y-4">
+                
+                <!-- START: ADD THIS NEW TITLE SECTION -->
+                <div class="text-center pb-3 border-b border-gray-700">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        Member Card
+                    </h3>
+                </div>
+                <!-- END: ADD THIS NEW TITLE SECTION -->
+
+                <div class="flex space-x-4 items-center">
+                    <img src="${user.profilePic}" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
+                    <div class="flex-1">
+                        <h2 class="text-l font-bold">${user.firstName} ${user.lastName}</h2>
+                        <div class="flex items-center text-2xl font-bold pride-gradient-text mb-1">
+                            <i data-lucide="circle-star" class="w-7 h-7 mr-2 pride-gradient-text"></i>
+                            <span>${user.points || 0}</span><span class="text-sm pride-gradient-text ml-1"> PTS</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400">${user.email || "N/A"}</p>
                     </div>
-                    <p class="text-sm text-gray-400">${user.email || "N/A"}</p>
+                    <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
+                        <canvas id="member-qr-code"></canvas>
+                    </div>
                 </div>
-                <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
-                    <canvas id="member-qr-code"></canvas>
-                </div>
+                ${
+                  earnedBadges.length > 0
+                    ? `
+                <div class="border-t border-gray-700 pt-3">
+                    <div class="flex items-center justify-center space-x-3">
+                        ${earnedBadges
+                          .map((badge) =>
+                            this.renderBadgeIcon(badge.icon, "w-6 h-6 text-amber-400")
+                          )
+                          .join("")}
+                    </div>
+                </div>`
+                    : ""
+                }
             </div>
-            ${
-              earnedBadges.length > 0
-                ? `
-            <div class="border-t border-gray-700 pt-3">
-                <div class="flex items-center justify-center space-x-3">
-                    ${earnedBadges
-                      .map((badge) =>
-                        this.renderBadgeIcon(badge.icon, "w-6 h-6 text-amber-400")
-                      )
-                      .join("")}
-                </div>
-            </div>`
-                : ""
-            }
         </div>
     </div>`;
 };
 
 
-
-// DASHBOARD CAROUSEL
+// DASHBOARD CAROUSEL IMAGE
 this.renderDashboardCarousel = () => {
   const carouselItems = [
-    { imageUrl: "https://i.pinimg.com/1200x/88/fb/55/88fb55aef79b73ac452880924c6f2f14.jpg", link: "dashboard" },
-    { imageUrl: "https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=3840&h=1920&q=90%203840w,%20https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=7680&h=3840&q=90%207680w", link: "directory" },
-    { imageUrl: "https://i.pinimg.com/736x/c0/7e/3f/c07e3f15759523f0c9a5fdead7db5033.jpg", link: "leaderboard" }
+    { imageUrl: "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/236ecf96-a881-428d-9213-83d1c7313131/dkjb7ys-6e27b054-35e1-4c99-91b6-5e3ebe8029b2.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi8yMzZlY2Y5Ni1hODgxLTQyOGQtOTIxMy04M2QxYzczMTMxMzEvZGtqYjd5cy02ZTI3YjA1NC0zNWUxLTRjOTktOTFiNi01ZTNlYmU4MDI5YjIuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.Fx-xYq9arp5HBxve6Wkza7nuTOmuMGrFuHQ_O3xPjTo", link: "rewards" },
+    { imageUrl: "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/236ecf96-a881-428d-9213-83d1c7313131/dkjb4v0-af1ec6b9-6075-4a3c-b662-ed5512cb6fbf.png/v1/fit/w_800,h_450,q_70,strp/director_by_titoycute_dkjb4v0-414w-2x.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NDUwIiwicGF0aCI6Ii9mLzIzNmVjZjk2LWE4ODEtNDI4ZC05MjEzLTgzZDFjNzMxMzEzMS9ka2piNHYwLWFmMWVjNmI5LTYwNzUtNGEzYy1iNjYyLWVkNTUxMmNiNmZiZi5wbmciLCJ3aWR0aCI6Ijw9ODAwIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.kIGGldx0F4f2G3KM_9AgMEk0QdiFctJP3vJbB8MhjOU", link: "directory" },
+    { imageUrl: "https://i.pinimg.com/1200x/fe/4d/a1/fe4da1dd4b4a61e5717ef1c73a169c99.jpg", link: "leaderboard" }
   ];
 
   return `
@@ -307,25 +323,44 @@ this.renderDashboardDailyRewards = () => {
     const points = DAILY_REWARD_POINTS[day - 1];
     
     let boxClass = "bg-gray-700/50 border-2 border-gray-600";
-    let content = `<div class="font-bold text-gray-400">${day}</div><div class="text-xs text-gray-500">${points} pts</div>`;
+    // MINIMIZED: Text is smaller for a more compact look
+    let content = `<div class="font-bold text-gray-400 text-sm">${day}</div><div class="text-[10px] text-gray-500">${points} pts</div>`;
     let onClick = "";
+    let finalHtml;
 
     if (isClaimed) {
-        boxClass = "bg-yellow-500/30 border-2 border-yellow-500";
-        content = `<i data-lucide="check-circle" class="w-8 h-8 text-yellow-400 mx-auto"></i>`;
-    } else if (isClaimable) {
+      boxClass = "bg-yellow-500/30 border-2 border-yellow-500";
+      // MINIMIZED: Icon is smaller
+      content = `<i data-lucide="check-circle" class="w-6 h-6 text-yellow-400 mx-auto"></i>`;
+      
+      // BLUR SHADOW EFFECT: We wrap the claimed box in a relative container
+      // with an absolute, blurred element behind it.
+      finalHtml = `
+        <div class="relative">
+          <div class="absolute -inset-1 bg-yellow-500 rounded-xl blur-lg opacity-60"></div>
+          <div class="relative rounded-lg p-2 aspect-square flex flex-col justify-center items-center ${boxClass}">
+            ${content}
+          </div>
+        </div>
+      `;
+    } else {
+      if (isClaimable) {
         boxClass = "bg-green-500/30 border-2 border-green-500 cursor-pointer animate-pulse";
-        content = `<div class="font-bold text-white">Claim</div><div class="text-xs text-green-300">${points} pts</div>`;
+        // MINIMIZED: Text is smaller
+        content = `<div class="font-bold text-white text-sm">Claim</div><div class="text-xs text-green-300">${points} pts</div>`;
         onClick = `onclick="app.claimDailyReward()"`;
+      }
+      // The non-claimed boxes don't get the glow wrapper
+      finalHtml = `<div class="rounded-lg p-2 aspect-square flex flex-col justify-center items-center ${boxClass}" ${onClick}>${content}</div>`;
     }
 
-    return `<div class="rounded-lg p-2 aspect-square flex flex-col justify-center items-center ${boxClass}" ${onClick}>${content}</div>`;
+    return finalHtml;
   }).join("");
 
   return `
     <div class="mb-4">
-        <h3 class="text-lg font-bold text-white mb-2">Daily Rewards</h3>
-        <div class="grid grid-cols-5 gap-2 text-center">
+        <h3 class="text-s font-bold text-white mb-2">Daily Rewards</h3>
+        <div class="grid grid-cols-5 gap-3 text-center">
             ${rewardBoxes}
         </div>
     </div>`;
@@ -352,17 +387,21 @@ this.renderDashboardActions = () => {
               <span class="font-semibold text-xs">QR Spots</span>
           </button>
           <button onclick="app.navigateTo('directory')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-              <i data-lucide="users" class="text-purple-400"></i>
+              <i data-lucide="users" class="text-orange-400"></i>
               <span class="font-semibold text-xs">Members Directory</span>
           </button>
           <button onclick="app.navigateTo('leaderboard')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-              <i data-lucide="bar-chart-3" class="text-blue-400"></i>
+              <i data-lucide="bar-chart-3" class="text-pink-400"></i>
               <span class="font-semibold text-xs">Ranks</span>
           </button>
           <button onclick="app.navigateTo('announcements')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-              <i data-lucide="megaphone" class="text-blue-400"></i>
+              <i data-lucide="megaphone" class="text-red-400"></i>
               <span class="font-semibold text-xs">Announcement</span>
           </button>
+           <button onclick="app.navigateTo('userguide')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+            <i data-lucide="book-open" class="text-yellow-400"></i>
+            <span class="font-semibold text-xs">User Guide</span>
+        </button>
       </div>
     `;
 };
@@ -1454,218 +1493,8 @@ announcements: () => {
                 </div>
             </div>`,
 
-    //DASHBOARD
 
-  //   dashboard: () => {
-
-  //     //CAROUSEL IMAGE OR PICTURE
-  //     const carouselItems = [
-  //       {
-  //           imageUrl: "https://i.pinimg.com/1200x/88/fb/55/88fb55aef79b73ac452880924c6f2f14.jpg", // Replace with your image URL
-  //           link: "dashboard"
-  //       },
-  //       {
-  //           imageUrl: "https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=3840&h=1920&q=90%203840w,%20https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=7680&h=3840&q=90%207680w", // Replace with your image URL
-  //           link: "dashboard"
-  //       },
-  //       {
-  //           imageUrl: "https://i.pinimg.com/736x/c0/7e/3f/c07e3f15759523f0c9a5fdead7db5033.jpg", // Replace with your image URL
-  //           link: "dashboard"
-  //       }
-  //   ];
-
-  //   // --- Generate the HTML for the carousel ---
-  //   const carouselHTML = `
-  //  <!--     <div class="px-4 pt-4">
-  //            <h2 class="text-xl font-bold mb-3">Discover More</h2>
-  //       </div> -->
-  //       <div class="relative w-full">
-  //           <div class="carousel-container" id="dashboard-carousel">
-  //               ${carouselItems.map(item => `
-  //                   <div class="carousel-item" 
-  //                        style="background-image: url('${item.imageUrl}')" 
-  //                        onclick="app.navigateTo('${item.link}')">
-  //                   </div>
-  //               `).join('')}
-  //           </div>
-            
-  //           <button onclick="app.scrollCarousel(-1)" class="carousel-arrow left-0">
-  //               <i data-lucide="chevron-left"></i>
-  //           </button>
-            
-  //           <button onclick="app.scrollCarousel(1)" class="carousel-arrow right-0">
-  //               <i data-lucide="chevron-right"></i>
-  //           </button>
-  //       </div>
-  //   `;
-
-  //     const user = this.state.loggedInUser;
-  //     if (!user.isValidated) {
-  //       return `
-  //     <div class="text-center p-6 bg-gray-900/50 rounded-xl">
-  //         <i data-lucide="shield-alert" class="w-16 h-16 mx-auto text-amber-400 mb-4"></i>
-  //         <h2 class="text-2xl font-bold mb-2">Account Pending Approval</h2>
-  //         <p class="text-gray-400">Your account has been registered successfully. An administrator will review your profile shortly. Once approved, you will have full access to all features.</p>
-  //     </div>
-  //   `;
-  //     }
-
-  //     // --- Start of New Code ---
-  //     this.prepareLoginRewardState(user);
-  //     const rewardState = this.state.loginReward || {
-  //       currentStreak: 0,
-  //       canClaim: false,
-  //     };
-
-  //     const renderRewardBoxes = () => {
-  //       return [1, 2, 3, 4, 5]
-  //         .map((day) => {
-  //           const isClaimed = day <= rewardState.currentStreak;
-  //           const isClaimable =
-  //             rewardState.canClaim && day === rewardState.currentStreak + 1;
-  //           const points = DAILY_REWARD_POINTS[day - 1];
-
-  //           let boxClass = "bg-gray-700/50 border-2 border-gray-600";
-  //           let content = `<div class="font-bold text-gray-400">${day}</div><div class="text-xs text-gray-500">${points} pts</div>`;
-  //           let onClick = "";
-
-  //           if (isClaimed) {
-  //             boxClass = "bg-yellow-500/30 border-2 border-yellow-500";
-  //             content = `<i data-lucide="check-circle" class="w-8 h-8 text-yellow-400 mx-auto"></i>`;
-  //           } else if (isClaimable) {
-  //             boxClass =
-  //               "bg-green-500/30 border-2 border-green-500 cursor-pointer animate-pulse";
-  //             content = `<div class="font-bold text-white">Claim</div><div class="text-xs text-green-300">${points} pts</div>`;
-  //             onClick = `onclick="app.claimDailyReward()"`;
-  //           }
-
-  //           return `
-  //       <div class="rounded-lg p-2 aspect-square flex flex-col justify-center items-center ${boxClass}" ${onClick}>
-  //         ${content}
-  //       </div>
-  //     `;
-  //         })
-  //         .join("");
-  //     };
-  //     // --- End of New Code ---
-
-  //     const latestAnnouncement = this.state.announcements[0];
-  //     const earnedBadges = (user.earnedBadgeIds || [])
-  //       .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
-  //       .filter(Boolean)
-  //       .slice(0, 10); // Show max 10 badges
-
-  //     return `
-
-  //       ${carouselHTML}
-
-
-
-
-
-  //   <div class="mb-4">
-  //     <h3 class="text-lg font-bold text-white mb-2">Daily Rewards</h3>
-  //     <div class="grid grid-cols-5 gap-2 text-center">
-  //       ${renderRewardBoxes()}
-  //     </div>
-  //   </div>
-
-
-
-    
-
-  //   <!-- CARD LIKE CONTAINER -->
-  //   <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
-  //       <div class="bg-gray-800 rounded-xl p-4 space-y-4">
-  //           <div class="flex space-x-4 items-center">
-  //               <img src="${
-  //                 user.profilePic
-  //               }" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
-  //               <div class="flex-1">
-  //                   <h2 class="text-l font-bold">${user.firstName} ${ user.lastName}</h2>
-  //               <div class="flex items-center  text-2xl font-bold pride-gradient-text mb-1">
-  //                   <i data-lucide="circle-star" class="w-7 h-7 mr-2 pride-gradient-text"></i>
-  //                   <span>${user.points || 0}</span><span class="text-sm pride-gradient-text ml-1"> PTS</span>
-  //               </div>
-  //                   <p class="text-sm text-gray-400"> ${ user.email || "N/A"   }</p>
-  //               </div>
-
-  //               <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
-  //                   <canvas id="member-qr-code"></canvas>
-  //               </div>
-
-  //           </div>
-  //           ${
-  //             earnedBadges.length > 0
-  //               ? `
-  //           <div class="border-t border-gray-700 pt-3">
-  //               <div class="flex items-center justify-center space-x-3">
-  //                   ${earnedBadges
-  //                     .map((badge) =>
-  //                       this.renderBadgeIcon(
-  //                         badge.icon,
-  //                         "w-6 h-6 text-amber-400"
-  //                       )
-  //                     )
-  //                     .join("")}
-  //               </div>
-  //           </div>`
-  //               : ""
-  //           }
-  //       </div>
-  //   </div>
-
-            
-  //   <br>
-  //   <div class="grid grid-cols-2 gap-4">
-  //       <button onclick="app.navigateTo('scanner')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-  //           <i data-lucide="scan-line" class="text-pink-400"></i>
-  //           <span class="font-semibold">Scan QR Code</span>
-  //       </button>
-  //       <button onclick="app.navigateTo('profile')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-  //           <i data-lucide="user-circle" class="text-purple-400"></i>
-  //           <span class="font-semibold">My Profile</span>
-  //       </button>
-  //   </div>
-  //   <br>
-  //   <div class="grid grid-cols-2 gap-4">
-  //       <button onclick="app.navigateTo('facebookFeed')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-  //           <i data-lucide="facebook" class="text-blue-400"></i>
-  //           <span class="font-semibold">BBGS Updates</span>
-  //       </button>
-  //       <button onclick="app.navigateTo('qrSpots')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-  //           <i data-lucide="map-pin" class="text-green-400"></i>
-  //           <span class="font-semibold">QR Spots</span>
-  //       </button>
-  //       <button onclick="app.navigateTo('games')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-  //           <i data-lucide="gamepad-2" class="text-purple-400"></i>
-  //           <span class="font-semibold">Games</span>
-  //       </button>
-  //       <button onclick="app.navigateTo('leaderboard')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-  //           <i data-lucide="bar-chart-3" class="text-blue-400"></i>
-  //           <span class="font-semibold">Ranks</span>
-  //       </button>
-  //   </div>
-  //   <br>
-  //   <div class="space-y-6">
-  //       ${
-  //         latestAnnouncement
-  //           ? `
-  //       <div class="bg-gray-900/50 p-4 rounded-xl border-l-4 border-pink-500">
-  //           <div class="flex items-center justify-between mb-1">
-  //               <h3 class="font-bold text-lg text-pink-400">Announcement</h3>
-  //               <p class="text-xs text-gray-400">${latestAnnouncement.timestamp}</p>
-  //           </div>
-  //           <p class="text-gray-300">${latestAnnouncement.message}</p>
-  //       </div>`
-  //           : ""
-  //       }
-  //   </div>
-  // `;
-  //   },
-
-// in script.js, inside the this.templates object
-
+//MAIN DASHBOARD OF ALL
 dashboard: () => {
   const user = this.state.loggedInUser;
 
@@ -1697,6 +1526,26 @@ dashboard: () => {
     </div>
   `;
 },
+
+
+//DASHBOARD USER GUIDE
+ userguide: () => {
+        return `
+            <div class="p-4">
+                <div class="flex items-center mb-6">
+                    <button onclick="app.navigateTo('dashboard')" class="p-2 rounded-full hover:bg-gray-700">
+                        <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                    </button>
+                    <h2 class="text-2xl font-bold ml-4">User Guide</h2>
+                </div>
+                <div style="position: relative; width: 100%; height: 0; padding-top: 177.7778%;padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;border-radius: 8px; will-change: transform;">
+                  <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
+                  src="https://www.canva.com/design/DAGy3ERSjCo/4e2CdzmxIShB6KdG7Jui2w/view?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
+                  </iframe>
+                </div>
+            </div>
+        `;
+    },
 
 
     //LARO
@@ -1911,6 +1760,10 @@ dashboard: () => {
             </div>
             `;
     },
+
+
+
+
     badges: () => {
       const earnedBadges = this.state.badges.filter((b) =>
         this.state.earnedBadges.some((eb) => eb.badgeId === b.id)
@@ -1990,6 +1843,8 @@ dashboard: () => {
             `;
     },
 
+
+    //DASH MEMBER DIRECTORY 
     directory: () => {
       const filteredUsers = this.state.users.filter(
         (u) =>
@@ -2001,61 +1856,34 @@ dashboard: () => {
             .includes(this.state.directorySearch) ||
             (u.skills || "").toLowerCase().includes(this.state.directorySearch))
       );
-      // Inside directory: () => { ... }
-      // ... existing directory template ...
       return `
     <h2 class="text-2xl font-bold text-center mb-4">Member Directory</h2>
     <div class="flex space-x-2 mb-4">
         <input id="directory-search-input" type="search" placeholder="Search by name or skill..." class="w-full bg-gray-700 rounded-lg p-3">
         <button onclick="app.handleDirectorySearch()" class="pride-gradient-bg px-4 rounded-lg"><i data-lucide="search"></i></button>
     </div>
-    <div class="space-y-2">
-    ${
-      filteredUsers
-        .map((user) => {
-          const earnedBadges = (user.earnedBadgeIds || [])
-            .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
-            .filter(Boolean)
-            .slice(0, 5);
-          // Check if the user is the current logged-in user
+    <div class="space-y-2">${filteredUsers.map((user) => {const earnedBadges = (user.earnedBadgeIds || [])
+       .map((badgeId) => this.state.badges.find((b) => b.id === badgeId)).filter(Boolean).slice(0, 5);
           const isCurrentUser = user.id === this.state.loggedInUser.id;
-
           return `
-            <div class="bg-gray-700 p-3 rounded-lg flex items-center space-x-4 cursor-pointer hover:bg-gray-600" onclick="app.openMemberDetailsModal('${
-              user.id
-            }')">
-  <div class="relative">
-    <img src="${user.profilePic}" class="w-12 h-12 rounded-full object-cover">
-    <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${
-      this.isUserOnline(user.lastSeen) ? "bg-green-400" : "bg-gray-500"
-    }"></div>
-  </div>
-  <div class="flex-1">
-    <p class="font-bold">${user.firstName} ${user.lastName}</p>
-    <p class="text-sm text-gray-400">
-  ${user.skills && user.skills.length > 15 ? user.skills.substring(0, 15) + '...' : user.skills || "No skills listed"}
-</p>
-  </div>
+            <div class="bg-gray-700 p-3 rounded-lg flex items-center space-x-4 cursor-pointer hover:bg-gray-600" onclick="app.openMemberDetailsModal('${user.id}')">
+              <div class="relative">
+                <img src="${user.profilePic}" class="w-12 h-12 rounded-full object-cover">
+                <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${this.isUserOnline(user.lastSeen) ? "bg-green-400" : "bg-gray-500"}"></div>
+              </div>
+            <div class="flex-1">
+              <p class="font-bold">${user.firstName} ${user.lastName}</p>
+              <p class="text-sm text-gray-400"> ${user.skills && user.skills.length > 15 ? user.skills.substring(0, 15) + '...' : user.skills || "No skills listed"}</p>
+            </div>
   
-                <div class="flex space-x-1">
-                    ${earnedBadges
-                      .map((badge) =>
-                        this.renderBadgeIcon(
-                          badge.icon,
-                          "w-5 h-5 text-amber-400"
-                        )
-                      )
-                      .join("")}
-                </div>
-                <!-- NEW CHAT BUTTON -->
-                ${
-                  !isCurrentUser
-                    ? `
+            <div class="flex space-x-1">${earnedBadges.map((badge) => this.renderBadgeIcon( badge.icon,"w-5 h-5 text-amber-400")).join("")}</div>
+              
+            <!-- NEW CHAT BUTTON -->
+                ${!isCurrentUser ? `
                 <button onclick="event.stopPropagation(); app.startChatWithUser('${user.id}')" class="bg-blue-500/20 text-blue-400 p-2 rounded-md hover:bg-blue-500/40">
                     <i data-lucide="message-square"></i>
                 </button>
-                `
-                    : ""
+                `: ""
                 }
             </div>
         `;
@@ -2065,8 +1893,7 @@ dashboard: () => {
     }
     </div>
     `;
-      // ... rest of directory template ...
-    },
+     },
 
     leaderboard: () => {
       const rankedUsers = this.state.users
@@ -3062,7 +2889,8 @@ this.toggleAnnouncement = (element) => {
     this.detachChatListeners();
   };
 
-  // --- ROUTING & RENDERING ---
+
+//THIS RENDER MAIN
   this.render = () => {
     const template = this.templates[this.state.currentPage];
     if (template) {
@@ -3074,10 +2902,7 @@ this.toggleAnnouncement = (element) => {
   this.navigateTo = (page) => {
     // Remove any existing scroll listener from the previous page
     this.elements.mainContent.onscroll = null;
-   
-  
-
-    if (this.state.currentPage === "scanner" && this.qrScanner)
+       if (this.state.currentPage === "scanner" && this.qrScanner)
       this.stopScanner();
     if (
       this.state.loggedInUser &&
@@ -3093,13 +2918,11 @@ this.toggleAnnouncement = (element) => {
       );
     }
 
-
-
     if (page === "admin") {
       this.fetchAllRewardsForAdmin();
     }
 
-    this.state.currentPage = page;
+  this.state.currentPage = page;
     if (page === "rewards") {
       this.state.rewards = [];
       this.state.rewardsLastDoc = null;
@@ -3120,13 +2943,9 @@ this.toggleAnnouncement = (element) => {
       this.aboutAudio = null;
     }
     if (page === 'about') {  
-      // --- If user IS logged in, play audio and navigate normally ---
       this.aboutAudio = new Audio("NoteGPT_Speech_1757811715642.mp3");
       this.aboutAudio.play();
     }
-
- 
-
     this.updateNav();
     this.state.currentPage = page;
     this.render();
@@ -3165,19 +2984,7 @@ this.toggleAnnouncement = (element) => {
         window.Alpine.initializeComponent(el)
       );
     }
-
     switch (this.state.currentPage) {
-      // case "messages":
-      //   if (this.state.currentChatId) {
-      //     const chatInputForm = document.getElementById("chat-input-form");
-      //     if (chatInputForm) {
-      //       chatInputForm.addEventListener(
-      //         "submit",
-      //         this.sendMessage.bind(this)
-      //       );
-      //     }
-      //   }
-      //   break;
       case "messages":
         // Find the container for messages
         const messagesContainer = document.getElementById("messages-container");
@@ -3201,7 +3008,6 @@ this.toggleAnnouncement = (element) => {
           }
         }
         break;
-
       case "dashboard":
         if (this.state.loggedInUser.isValidated)
           this.generateQRCode(
@@ -3210,11 +3016,9 @@ this.toggleAnnouncement = (element) => {
             80
           );
         break;
-
       case "qrSpots":
         this.initUserMap();
         break;
-
       case "facebookFeed":
         if (typeof FB !== "undefined") {
           FB.XFBML.parse();
@@ -3260,11 +3064,8 @@ this.toggleAnnouncement = (element) => {
       case "scanner":
         this.startScanner();
         break;
-
-      
-
       case "admin":
-        if (document.getElementById("reward-form")) {
+               if (document.getElementById("reward-form")) {
           document
             .getElementById("reward-form")
             .addEventListener("submit", (e) => {
@@ -3318,8 +3119,10 @@ this.toggleAnnouncement = (element) => {
             );
           }
         });
-
         break;
+        case "userguide":
+          html = this.views.userguide();
+          break;
     }
   };
 
