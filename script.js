@@ -46,11 +46,51 @@ import {
   serverTimestamp as firestoreServerTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";           
                
- 
+//MAIN APP//
 
 // --- Main Application Logic ---
 const DAILY_REWARD_POINTS = [10, 15, 20, 25, 100]; // Day 1, Day 2, Day 3, Day 4, Day 5
 const App = function () {
+
+
+this.manageWakeLock = () => {
+  // Check if the Screen Wake Lock API is supported by the browser
+  if ('wakeLock' in navigator) {
+    
+    const requestWakeLock = async () => {
+      try {
+        // Request a screen wake lock
+        this.state.wakeLockSentinel = await navigator.wakeLock.request('screen');
+        
+        // Listen for when the lock is released (e.g., user switches tabs)
+        this.state.wakeLockSentinel.addEventListener('release', () => {
+          console.log('Screen Wake Lock was released.');
+          this.state.wakeLockSentinel = null; // Clear the sentinel
+        });
+        
+        console.log('Screen Wake Lock is active.');
+      } catch (err) {
+        // This can happen if the user denies the request or for other reasons
+        console.error(`Could not acquire Wake Lock: ${err.name}, ${err.message}`);
+      }
+    };
+
+    // Request the lock for the first time
+    requestWakeLock();
+    
+    // When the user comes back to the app, we need to re-acquire the lock.
+    // The browser automatically releases it when the tab is not visible.
+    document.addEventListener('visibilitychange', () => {
+      if (this.state.wakeLockSentinel === null && document.visibilityState === 'visible') {
+        console.log('Re-acquiring Screen Wake Lock after visibility change.');
+        requestWakeLock();
+      }
+    });
+
+  } else {
+    console.log('Screen Wake Lock API not supported on this browser.');
+  }
+};
 
  
 // This function is called when the user clicks the "Edit" (pencil) icon
@@ -180,7 +220,8 @@ this.scrollCarousel = (direction) => {
     firstVisibleMessage: null,
     allMessagesLoaded: false,
     dailyRewardTimerId: null,
-
+    carouselItems: [],
+    wakeLockSentinel: null,
   };
 
 
@@ -227,12 +268,14 @@ this.renderDashboardProfile = (user) => {
     </div>`;
 };
 
+
+
 // DASHBOARD CAROUSEL
 this.renderDashboardCarousel = () => {
   const carouselItems = [
     { imageUrl: "https://i.pinimg.com/1200x/88/fb/55/88fb55aef79b73ac452880924c6f2f14.jpg", link: "dashboard" },
-    { imageUrl: "https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=3840&h=1920&q=90%203840w,%20https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=7680&h=3840&q=90%207680w", link: "dashboard" },
-    { imageUrl: "https://i.pinimg.com/736x/c0/7e/3f/c07e3f15759523f0c9a5fdead7db5033.jpg", link: "dashboard" }
+    { imageUrl: "https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=3840&h=1920&q=90%203840w,%20https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=7680&h=3840&q=90%207680w", link: "directory" },
+    { imageUrl: "https://i.pinimg.com/736x/c0/7e/3f/c07e3f15759523f0c9a5fdead7db5033.jpg", link: "leaderboard" }
   ];
 
   return `
@@ -250,6 +293,8 @@ this.renderDashboardCarousel = () => {
     </div>
   `;
 };
+
+
 
 //DAILY REWARDS
 this.renderDashboardDailyRewards = () => {
@@ -2340,6 +2385,7 @@ dashboard: () => {
       });
 
       return `
+
 <!-- ADMIN PANEL -->
       <h2 class="text-2xl font-bold text-center mb-6">Admin Panel</h2>
         <div x-data="{ tab: '${this.state.adminActiveTab}' }" @tab-change.window="tab = $event.detail" class="bg-gray-900 rounded-xl p-2">
@@ -2356,7 +2402,19 @@ dashboard: () => {
             <button @click="tab = 'badges'" :class="{ 'pride-gradient-bg text-white': tab === 'badges', 'bg-gray-700 text-gray-300': tab !== 'badges' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Badges</button>
             <button @click="tab = 'announcements'" :class="{ 'pride-gradient-bg text-white': tab === 'announcements', 'bg-gray-700 text-gray-300': tab !== 'announcements' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Announce</button>
             <button @click="tab = 'mapSpots'" :class="{ 'pride-gradient-bg text-white': tab === 'mapSpots', 'bg-gray-700 text-gray-300': tab !== 'mapSpots' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Map Spots</button>
-            <button @click="tab = 'scan'" :class="{ 'pride-gradient-bg text-white': tab === 'scan', 'bg-gray-700 text-gray-300': tab !== 'scan' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Scan QR</button><button @click="tab = 'logs'" :class="{ 'pride-gradient-bg text-white': tab === 'logs', 'bg-gray-700 text-gray-300': tab !== 'logs' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Logs</button>
+            <button @click="tab = 'scan'" :class="{ 'pride-gradient-bg text-white': tab === 'scan', 'bg-gray-700 text-gray-300': tab !== 'scan' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Scan QR</button>
+            <button @click="tab = 'logs'" :class="{ 'pride-gradient-bg text-white': tab === 'logs', 'bg-gray-700 text-gray-300': tab !== 'logs' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Logs</button>
+            
+          </div>
+
+      
+
+          <div x-show="tab === 'mapSpots'">
+           <div class="mt-4">
+            <button onclick="app.openAdminMapPanel()" class="w-full bg-gray-700 hover:bg-gray-600 p-4 rounded-lg flex items-center justify-between">
+              <span class="font-semibold text-lg">Manage QR Code Spots</span><i data-lucide="map"></i>
+            </button>
+            </div>
           </div>
           
           <!-- ADMIN PENDING APPROVAL -->
@@ -2419,7 +2477,7 @@ dashboard: () => {
         '<p class="text-gray-400 text-center">No events created.</p>'
       }</div></div>
            
-          <!-- ADMIN REWARDS -->
+          <!-- ADMIN REWARDS CREATION -->
                 <div x-show="tab === 'rewards'" style="display: none;">
                 <div id="reward-form-panel" class="bg-gray-800 p-4 rounded-lg mb-4">
                     <h3 class="font-semibold text-lg mb-4">${
@@ -2427,9 +2485,7 @@ dashboard: () => {
                     }</h3>
                     <form id="reward-form" class="space-y-4" x-data="{ claimType: '${
                       editingReward?.claimType || "once"
-                    }', limitType: '${
-        editingReward?.claimLimitType || "unlimited"
-      }' }">
+                    }', limitType: '${editingReward?.claimLimitType || "unlimited" }' }">
                         <input name="rewardName" type="text" placeholder="Reward Name" required class="w-full bg-gray-700 rounded-lg p-3" value="${
                           editingReward?.name || ""
                         }">
@@ -2502,45 +2558,34 @@ dashboard: () => {
                         </div>
                     </form>
                 </div>
+
                <h3 class="font-semibold text-lg mb-2">Available Rewards</h3>
-<div class="flex space-x-2 mb-4">
-    <input type="search" id="admin-reward-search-input" placeholder="Search rewards..." class="w-full bg-gray-700 rounded-lg p-3">
-    <button onclick="app.handleAdminRewardSearch()" class="pride-gradient-bg px-4 rounded-lg"><i data-lucide="search"></i></button>
-    <button onclick="app.showAllRewards()" class="bg-gray-600 px-4 rounded-lg">Show All</button>
-</div>
-            
-<div id="rewards-list" class="space-y-2">${
-        filteredRewards
-          .map(
-            (reward) =>
-              `<div class="bg-gray-700 p-3 rounded-lg"><div class="flex items-center justify-between"><div><p class="font-semibold">${
-                reward.name
-              } <span class="text-xs ml-2 px-2 py-0.5 rounded-full ${
-                reward.isVisible
-                  ? "bg-green-500/20 text-green-400"
-                  : "bg-gray-600 text-gray-400"
-              }">${
-                reward.isVisible ? "Visible" : "Hidden"
-              }</span></p><p class="text-sm ${
-                reward.type === "cost" ? "text-red-400" : "text-green-400"
-              }">${reward.type === "cost" ? "-" : "+"}${
-                reward.cost
-              } Points</p></div><div class="flex items-center space-x-2"><div class="bg-white p-1 rounded-md cursor-pointer" onclick="app.openRewardQrModal('${
-                reward.id
-              }')"><canvas id="reward-qr-${
-                reward.id
-              }" class="reward-qr-canvas" data-reward-id="${
-                reward.id
-              }"></canvas></div><button onclick="app.switchToEditRewardMode('${
-                reward.id
-              }'); document.querySelector('[data-tab=rewards]').click();" class="p-2 bg-gray-600 rounded-md hover:bg-gray-500"><i data-lucide="edit-2" class="w-4 h-4"></i></button><button onclick="app.handleAdminDeleteReward('${
-                reward.id
-              }')" class="p-2 bg-red-900/50 rounded-md hover:bg-red-900/80"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div></div>`
-          )
-          .join("") ||
-        '<p class="text-gray-400 text-center">No rewards found.</p>'
-      }</div>
+                <div class="flex space-x-2 mb-4">
+                    <input type="search" id="admin-reward-search-input" placeholder="Search rewards..." class="w-full bg-gray-700 rounded-lg p-3">
+                    <button onclick="app.handleAdminRewardSearch()" class="pride-gradient-bg px-4 rounded-lg"><i data-lucide="search"></i></button>
+                    <button onclick="app.showAllRewards()" class="bg-gray-600 px-4 rounded-lg">Show All</button>
                 </div>
+            
+              <div id="rewards-list" class="space-y-2">${filteredRewards.map((reward) =>
+              `<div class="bg-gray-700 p-3 rounded-lg"><div class="flex items-center justify-between">
+                <div>
+                <p class="font-semibold">${ reward.name} <span class="text-xs ml-2 px-2 py-0.5 rounded-full ${reward.isVisible? "bg-green-500/20 text-green-400": "bg-gray-600 text-gray-400" }">${reward.isVisible ? "Visible" : "Hidden" }</span></p>
+                <p class="text-sm ${reward.type === "cost" ? "text-red-400" : "text-green-400"}">${reward.type === "cost" ? "-" : "+"}${reward.cost} Points</p>
+                </div>
+              <div class="flex items-center space-x-2">
+                <div class="bg-white p-1 rounded-md cursor-pointer" onclick="app.openRewardQrModal('${reward.id}')">
+                <canvas id="reward-qr-${reward.id}" class="reward-qr-canvas" data-reward-id="${reward.id}"></canvas>
+                </div>
+                <button onclick="app.switchToEditRewardMode('${reward.id}'); document.querySelector('[data-tab=rewards]').click();" class="p-2 bg-gray-600 rounded-md hover:bg-gray-500"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                <button onclick="app.handleAdminDeleteReward('${reward.id}')" class="p-2 bg-red-900/50 rounded-md hover:bg-red-900/80"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+                </div>
+              </div>`
+              )
+              .join("") ||
+              '<p class="text-gray-400 text-center">No rewards found.</p>'
+              }</div>
+              </div>
             
 
       <!-- ADMIN MEMBERS -->
@@ -2618,24 +2663,18 @@ dashboard: () => {
  
       
       <!-- ADMIN SCAN QR CODE -->
-      <div x-show="tab === 'scan'" style="display: none;"><h3 class="font-semibold text-lg mb-2">Award via QR Scan</h3><div class="space-y-4 bg-gray-700 p-4 rounded-lg"><p class="text-sm text-gray-300">Select a reward or badge to give to the member upon scanning their QR code.</p>
-                           <div> <label for="admin-reward-select" class="block text-sm font-medium text-gray-300 mb-1">Select Reward</label><select id="admin-reward-select" class="w-full bg-gray-800 rounded-lg p-3 outline-none"><option value="">-- No Reward --</option>${this.state.adminRewards
-                             .map(
-                               (r) =>
-                                 `<option value="${r.id}" data-points="${
-                                   r.cost
-                                 }">${r.name} (${
-                                   r.type === "gain" ? "+" : "-"
-                                 }${r.cost} pts) ${
-                                   r.isVisible ? "" : "🚫"
-                                 }</option>`
-                             )
-                             .join("")}</select>
-                            </div>
-                            <div>
-
-
-
+      <div x-show="tab === 'scan'" style="display: none;">
+      <h3 class="font-semibold text-lg mb-2">Award via QR Scan</h3>
+        <div class="space-y-4 bg-gray-700 p-4 rounded-lg">
+        <p class="text-sm text-gray-300">Select a reward or badge to give to the member upon scanning their QR code.</p>
+          <div>
+          <label for="admin-reward-select" class="block text-sm font-medium text-gray-300 mb-1">Select Reward</label>
+          <select id="admin-reward-select" class="w-full bg-gray-800 rounded-lg p-3 outline-none">
+          <option value="">-- No Reward --</option>${this.state.adminRewards.map((r) => 
+            `<option value="${r.id}" data-points="${r.cost}">${r.name} (${r.type === "gain" ? "+" : "-"}${r.cost} pts) ${r.isVisible ? "" : "🚫"}</option>`).join("")}
+          </select>
+          </div>
+      <div>
 
                                 
     <label class="block text-sm font-medium text-gray-300 mb-1">Select Badge</label>
@@ -2646,7 +2685,18 @@ dashboard: () => {
         <span class="text-gray-400">-- No Badge --</span>
         <i data-lucide="chevron-down"></i>
     </button>
-</div><div id="admin-qr-reader" class="w-full rounded-lg overflow-hidden"></div><p id="admin-scan-status" class="text-center text-yellow-400 h-4"></p><button id="start-scan-btn" onclick="app.startAdminScanner()" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold flex items-center justify-center space-x-2"><i data-lucide="camera"></i><span>Start Scan</span></button></div></div><div x-show="tab === 'logs'" style="display: none;"><h3 class="font-semibold text-lg mb-4 text-center">System Activity Logs</h3><div class="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4"><select id="log-year-select" class="bg-gray-700 rounded-lg p-2 text-sm"><option value="all" ${
+</div>
+
+<div id="admin-qr-reader" class="w-full rounded-lg overflow-hidden"></div>
+<p id="admin-scan-status" class="text-center text-yellow-400 h-4"></p>
+<button id="start-scan-btn" onclick="app.startAdminScanner()" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold flex items-center justify-center space-x-2"><i data-lucide="camera"></i><span>Start Scan</span></button>
+</div>
+
+<!--ADMIN LOGS-->
+</div><div x-show="tab === 'logs'" style="display: none;">
+<h3 class="font-semibold text-lg mb-4 text-center">System Activity Logs</h3>
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
+    <select id="log-year-select" class="bg-gray-700 rounded-lg p-2 text-sm"><option value="all" ${
         this.state.logFilter.year === "all" ? "selected" : ""
       }>All Years</option>${[
         ...new Set(
@@ -2684,23 +2734,24 @@ dashboard: () => {
           }>${i + 1}</option>`
       ).join(
         ""
-      )}</select><button onclick="app.applyLogFilter()" class="pride-gradient-bg text-white font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center space-x-2"><i data-lucide="search" class="w-4 h-4"></i><span>Search</span></button></div><div class="space-y-2">${
-        filteredLogs
-          .map(
-            (log) =>
-              `<div class="bg-gray-700 p-3 rounded-lg text-sm"><p><strong class="text-amber-400">${
-                log.actorName || "System"
-              }</strong> ${log.details}</p>${
-                log.beforePoints !== undefined
-                  ? `<p class="text-xs text-gray-400">Points: ${log.beforePoints} → ${log.afterPoints}</p>`
-                  : ""
-              }<p class="text-xs text-gray-400 mt-1">${log.timestamp
-                .toDate()
-                .toLocaleString()}</p></div>`
+      )}
+      </select>
+      <button onclick="app.applyLogFilter()" class="pride-gradient-bg text-white font-semibold py-2 px-4 rounded-lg text-sm flex items-center justify-center space-x-2"><i data-lucide="search" class="w-4 h-4"></i><span>Search</span></button>
+      </div>
+      
+      <div class="space-y-2">${filteredLogs.map((log) =>
+              `<div class="bg-gray-700 p-3 rounded-lg text-sm"><p><strong class="text-amber-400">${log.actorName || "System" }</strong> ${log.details}</p>
+                ${ log.beforePoints !== undefined ? `<p class="text-xs text-gray-400">Points: ${log.beforePoints} → ${log.afterPoints}</p>`
+                : ""
+                }<p class="text-xs text-gray-400 mt-1">${log.timestamp.toDate().toLocaleString()}</p>
+              </div>`
           )
           .join("") ||
         '<p class="text-gray-400 text-center py-4">No logs match the current filter.</p>'
-      }</div></div></div>`;
+      }</div></div>
+      
+            
+      </div>`;
     },
   };
 
@@ -2755,6 +2806,8 @@ this.toggleAnnouncement = (element) => {
       this.fb.auth = getAuth(this.fb.app);
       this.fb.db = getFirestore(this.fb.app);
       this.fb.rtdb = getDatabase(this.fb.app);
+       this.manageWakeLock();
+       
     } catch (error) {
       console.error("Firebase initialization failed:", error);
       this.elements.loadingText.textContent =
@@ -2799,6 +2852,8 @@ this.toggleAnnouncement = (element) => {
       this.elements.loadingOverlay.classList.add("hidden");
     });
   };
+
+
 
   // --- NEW FUNCTION: MANAGE PRESENCE ---
   this.managePresence = () => {
@@ -3206,6 +3261,8 @@ this.toggleAnnouncement = (element) => {
         this.startScanner();
         break;
 
+      
+
       case "admin":
         if (document.getElementById("reward-form")) {
           document
@@ -3265,6 +3322,8 @@ this.toggleAnnouncement = (element) => {
         break;
     }
   };
+
+ 
 
   this.eventIcon = L.icon({
     iconUrl:
@@ -3627,6 +3686,7 @@ this.toggleAnnouncement = (element) => {
       .join("");
     lucide.createIcons();
   };
+
 
   this.handleSaveSpot = async (e) => {
     e.preventDefault();
@@ -4616,7 +4676,7 @@ this.toggleAnnouncement = (element) => {
         skills: newUser.skills,
         contact: newUser.contact,
         social: newUser.social || "",
-        points: 0,
+        points: 50,
         profilePic: `https://placehold.co/400x400/F59E0B/FFFFFF?text=${newUser.firstName.charAt(
           0
         )}`,
@@ -6224,6 +6284,10 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       app.handleSubmitAnnouncement(e);
     }
+    else if (e.target.id === "carousel-item-form") {
+  e.preventDefault();
+  app.handleSubmitCarouselItem(e);
+}
   });
 
   // Add event delegation for badge clicks
