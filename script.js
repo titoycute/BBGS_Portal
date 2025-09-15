@@ -52,8 +52,53 @@ import {
 const DAILY_REWARD_POINTS = [10, 15, 20, 25, 100]; // Day 1, Day 2, Day 3, Day 4, Day 5
 const App = function () {
 
-  // in script.js, inside the App function
+ 
+// This function is called when the user clicks the "Edit" (pencil) icon
+this.handleEditClick = (id) => {
+  // Find the full announcement object from the state using its ID
+  const announcementToEdit = this.state.announcements.find(ann => ann.id === id);
 
+  // If we didn't find the announcement, stop to prevent errors
+  if (!announcementToEdit) {
+    console.error("Could not find announcement to edit with ID:", id);
+    return;
+  }
+
+  const form = document.getElementById('announcement-form');
+  const submitBtn = document.getElementById('announcement-submit-btn');
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  const formTitle = document.getElementById('announcement-form-title');
+  
+  // Populate the form using the data we found
+  form.elements.announcementId.value = announcementToEdit.id;
+  form.elements.announcementTitle.value = announcementToEdit.title;
+  form.elements.announcementMessage.value = announcementToEdit.message;
+  
+  // Change the UI to "Edit Mode"
+  formTitle.textContent = "Edit Announcement";
+  submitBtn.textContent = "Update Announcement";
+  cancelBtn.classList.remove('hidden'); // Show the cancel button
+  
+  // Scroll to the top of the page to show the form
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// This function is called when the user clicks the "Cancel" button
+this.handleCancelEdit = () => {
+  const form = document.getElementById('announcement-form');
+  const submitBtn = document.getElementById('announcement-submit-btn');
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  const formTitle = document.getElementById('announcement-form-title');
+
+  // Clear all form fields
+  form.reset();
+  form.elements.announcementId.value = '';
+
+  // Change the UI back to "Create Mode"
+  formTitle.textContent = "Post New Announcement";
+  submitBtn.textContent = "Post Announcement";
+  cancelBtn.classList.add('hidden'); // Hide the cancel button
+};
 // in script.js, replace the existing scrollCarousel function
 
 this.scrollCarousel = (direction) => {
@@ -287,7 +332,7 @@ this.renderDashboardAnnouncement = () => {
     return `
       <div class="bg-gray-900/50 p-4 rounded-xl border-l-4 border-pink-500">
           <div class="flex items-center justify-between mb-1">
-              <h3 class="font-bold text-lg text-pink-400">Latest Announcement</h3>
+              <h3 class="font-bold text-lg text-pink-400">Announcement</h3>
               <p class="text-xs text-gray-400">${latestAnnouncement.timestamp}</p>
           </div>
           <p class="text-gray-300">${latestAnnouncement.message}</p>
@@ -1068,10 +1113,8 @@ announcements: () => {
 
     return `
       <div class="announcement-item" onclick="app.toggleAnnouncement(this)">
-          <div class="announcement-header">
-              <div>
-                  <p class="text-xs text-gray-400 mt-1">${ann.timestamp}</p>
-              </div>
+          <h4 class="font-bold text-lg text-white">${ann.title || ann.timestamp}</h4>
+          <p class="text-xs text-gray-400 mt-1">${ann.timestamp}</p>
           <div class="announcement-content">
               <div class="border-t border-gray-600 my-3"></div>
               <p class="text-sm text-gray-200 whitespace-pre-wrap">${ann.message}</p>
@@ -1329,237 +1372,252 @@ announcements: () => {
                     <p class="text-gray-400 mb-8">Connecting Our Community, One Scan at a Time.</p>
                 </div>
                 <div x-data="{ tab: 'login' }" class="bg-gray-900 rounded-xl p-2">
-                    <div class="flex space-x-2 mb-4"><button @click="tab = 'login'" :class="{ 'pride-gradient-bg text-white': tab === 'login', 'bg-gray-700 text-gray-300': tab !== 'login' }" class="flex-1 py-2 rounded-lg font-semibold transition-all">Log In</button><button @click="tab = 'register'" :class="{ 'pride-gradient-bg text-white': tab === 'register', 'bg-gray-700 text-gray-300': tab !== 'register' }" class="flex-1 py-2 rounded-lg font-semibold transition-all">Register</button></div>
+                    <div class="flex space-x-2 mb-4">
+                    <button @click="tab = 'login'" :class="{ 'pride-gradient-bg text-white': tab === 'login', 'bg-gray-700 text-gray-300': tab !== 'login' }" class="flex-1 py-2 rounded-lg font-semibold transition-all">Log In</button>
+                    <button @click="tab = 'register'" :class="{ 'pride-gradient-bg text-white': tab === 'register', 'bg-gray-700 text-gray-300': tab !== 'register' }" class="flex-1 py-2 rounded-lg font-semibold transition-all">Register</button></div>
+                      
+                    <!-- LOGIN FORM -->
                     <div x-show="tab === 'login'">
                         <form id="login-form" class="space-y-4 p-4">
                             <input name="email" type="email" placeholder="Email Address" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
                             <input name="password" type="password" placeholder="Password" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
                             <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95">Log In</button>
-
-
-
-                      <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%;
-                      padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;
-                      border-radius: 8px; will-change: transform;">
-                        <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
-                          src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1">
-                        </iframe>
-                      </div>                            
-                    </form>
+                          
+                                <!-- CANVA VIDEO -->
+                                <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%; padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden; border-radius: 8px; will-change: transform;">
+                                  <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;" src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1"></iframe>
+                                </div>                            
+                          </form>
+                      </div>
+                    <!-- REGISTER FORM -->
+                    <div x-show="tab === 'register'" style="display: none;">
+                      <form id="register-form" class="space-y-4 p-4">
+                        <div class="grid grid-cols-2 gap-4">
+                          <input name="firstName" type="text" placeholder="First Name*" required class="w-full bg-gray-700 rounded-lg p-3">
+                          <input name="lastName" type="text" placeholder="Last Name*" required class="w-full bg-gray-700 rounded-lg p-3">
+                          <input name="middleName" type="text" placeholder="Middle Name" class="w-full bg-gray-700 rounded-lg p-3">
+                          <input name="suffix" type="text" placeholder="Suffix" class="w-full bg-gray-700 rounded-lg p-3">
+                        </div>
+                        <input name="skills" type="text" placeholder="Skills/Talents (e.g., Host, Singer)" required class="w-full bg-gray-700 rounded-lg p-3">
+                        <input name="contact" type="tel" placeholder="Contact Number*" required class="w-full bg-gray-700 rounded-lg p-3">
+                        <input name="social" type="text" placeholder="Social Media Address" class="w-full bg-gray-700 rounded-lg p-3">
+                        <input name="email" type="email" placeholder="Email Address*" required class="w-full bg-gray-700 rounded-lg p-3">
+                        <input name="password" type="password" placeholder="Password*" required class="w-full bg-gray-700 rounded-lg p-3">
+                        <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Create My Account</button>
+                      </form>
                     </div>
-                    <div x-show="tab === 'register'" style="display: none;"><form id="register-form" class="space-y-4 p-4"><div class="grid grid-cols-2 gap-4"><input name="firstName" type="text" placeholder="First Name*" required class="w-full bg-gray-700 rounded-lg p-3"><input name="lastName" type="text" placeholder="Last Name*" required class="w-full bg-gray-700 rounded-lg p-3"><input name="middleName" type="text" placeholder="Middle Name" class="w-full bg-gray-700 rounded-lg p-3"><input name="suffix" type="text" placeholder="Suffix" class="w-full bg-gray-700 rounded-lg p-3"></div><input name="skills" type="text" placeholder="Skills/Talents (e.g., Host, Singer)" required class="w-full bg-gray-700 rounded-lg p-3"><input name="contact" type="tel" placeholder="Contact Number*" required class="w-full bg-gray-700 rounded-lg p-3"><input name="social" type="text" placeholder="Social Media Address" class="w-full bg-gray-700 rounded-lg p-3"><input name="email" type="email" placeholder="Email Address*" required class="w-full bg-gray-700 rounded-lg p-3"><input name="password" type="password" placeholder="Password*" required class="w-full bg-gray-700 rounded-lg p-3"><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Create My Account</button></form></div>
                 </div>
             </div>`,
 
     //DASHBOARD
 
-    dashboard: () => {
+  //   dashboard: () => {
 
-      //CAROUSEL IMAGE OR PICTURE
-      const carouselItems = [
-        {
-            imageUrl: "https://i.pinimg.com/1200x/88/fb/55/88fb55aef79b73ac452880924c6f2f14.jpg", // Replace with your image URL
-            link: "dashboard"
-        },
-        {
-            imageUrl: "https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=3840&h=1920&q=90%203840w,%20https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=7680&h=3840&q=90%207680w", // Replace with your image URL
-            link: "dashboard"
-        },
-        {
-            imageUrl: "https://i.pinimg.com/736x/c0/7e/3f/c07e3f15759523f0c9a5fdead7db5033.jpg", // Replace with your image URL
-            link: "dashboard"
-        }
-    ];
+  //     //CAROUSEL IMAGE OR PICTURE
+  //     const carouselItems = [
+  //       {
+  //           imageUrl: "https://i.pinimg.com/1200x/88/fb/55/88fb55aef79b73ac452880924c6f2f14.jpg", // Replace with your image URL
+  //           link: "dashboard"
+  //       },
+  //       {
+  //           imageUrl: "https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=3840&h=1920&q=90%203840w,%20https://cdn-front.freepik.com/images/ai/image-generator/cover/image-generator-header.webp?w=7680&h=3840&q=90%207680w", // Replace with your image URL
+  //           link: "dashboard"
+  //       },
+  //       {
+  //           imageUrl: "https://i.pinimg.com/736x/c0/7e/3f/c07e3f15759523f0c9a5fdead7db5033.jpg", // Replace with your image URL
+  //           link: "dashboard"
+  //       }
+  //   ];
 
-    // --- Generate the HTML for the carousel ---
-    const carouselHTML = `
-   <!--     <div class="px-4 pt-4">
-             <h2 class="text-xl font-bold mb-3">Discover More</h2>
-        </div> -->
-        <div class="relative w-full">
-            <div class="carousel-container" id="dashboard-carousel">
-                ${carouselItems.map(item => `
-                    <div class="carousel-item" 
-                         style="background-image: url('${item.imageUrl}')" 
-                         onclick="app.navigateTo('${item.link}')">
-                    </div>
-                `).join('')}
-            </div>
+  //   // --- Generate the HTML for the carousel ---
+  //   const carouselHTML = `
+  //  <!--     <div class="px-4 pt-4">
+  //            <h2 class="text-xl font-bold mb-3">Discover More</h2>
+  //       </div> -->
+  //       <div class="relative w-full">
+  //           <div class="carousel-container" id="dashboard-carousel">
+  //               ${carouselItems.map(item => `
+  //                   <div class="carousel-item" 
+  //                        style="background-image: url('${item.imageUrl}')" 
+  //                        onclick="app.navigateTo('${item.link}')">
+  //                   </div>
+  //               `).join('')}
+  //           </div>
             
-            <button onclick="app.scrollCarousel(-1)" class="carousel-arrow left-0">
-                <i data-lucide="chevron-left"></i>
-            </button>
+  //           <button onclick="app.scrollCarousel(-1)" class="carousel-arrow left-0">
+  //               <i data-lucide="chevron-left"></i>
+  //           </button>
             
-            <button onclick="app.scrollCarousel(1)" class="carousel-arrow right-0">
-                <i data-lucide="chevron-right"></i>
-            </button>
-        </div>
-    `;
+  //           <button onclick="app.scrollCarousel(1)" class="carousel-arrow right-0">
+  //               <i data-lucide="chevron-right"></i>
+  //           </button>
+  //       </div>
+  //   `;
 
-      const user = this.state.loggedInUser;
-      if (!user.isValidated) {
-        return `
-      <div class="text-center p-6 bg-gray-900/50 rounded-xl">
-          <i data-lucide="shield-alert" class="w-16 h-16 mx-auto text-amber-400 mb-4"></i>
-          <h2 class="text-2xl font-bold mb-2">Account Pending Approval</h2>
-          <p class="text-gray-400">Your account has been registered successfully. An administrator will review your profile shortly. Once approved, you will have full access to all features.</p>
-      </div>
-    `;
-      }
+  //     const user = this.state.loggedInUser;
+  //     if (!user.isValidated) {
+  //       return `
+  //     <div class="text-center p-6 bg-gray-900/50 rounded-xl">
+  //         <i data-lucide="shield-alert" class="w-16 h-16 mx-auto text-amber-400 mb-4"></i>
+  //         <h2 class="text-2xl font-bold mb-2">Account Pending Approval</h2>
+  //         <p class="text-gray-400">Your account has been registered successfully. An administrator will review your profile shortly. Once approved, you will have full access to all features.</p>
+  //     </div>
+  //   `;
+  //     }
 
-      // --- Start of New Code ---
-      this.prepareLoginRewardState(user);
-      const rewardState = this.state.loginReward || {
-        currentStreak: 0,
-        canClaim: false,
-      };
+  //     // --- Start of New Code ---
+  //     this.prepareLoginRewardState(user);
+  //     const rewardState = this.state.loginReward || {
+  //       currentStreak: 0,
+  //       canClaim: false,
+  //     };
 
-      const renderRewardBoxes = () => {
-        return [1, 2, 3, 4, 5]
-          .map((day) => {
-            const isClaimed = day <= rewardState.currentStreak;
-            const isClaimable =
-              rewardState.canClaim && day === rewardState.currentStreak + 1;
-            const points = DAILY_REWARD_POINTS[day - 1];
+  //     const renderRewardBoxes = () => {
+  //       return [1, 2, 3, 4, 5]
+  //         .map((day) => {
+  //           const isClaimed = day <= rewardState.currentStreak;
+  //           const isClaimable =
+  //             rewardState.canClaim && day === rewardState.currentStreak + 1;
+  //           const points = DAILY_REWARD_POINTS[day - 1];
 
-            let boxClass = "bg-gray-700/50 border-2 border-gray-600";
-            let content = `<div class="font-bold text-gray-400">${day}</div><div class="text-xs text-gray-500">${points} pts</div>`;
-            let onClick = "";
+  //           let boxClass = "bg-gray-700/50 border-2 border-gray-600";
+  //           let content = `<div class="font-bold text-gray-400">${day}</div><div class="text-xs text-gray-500">${points} pts</div>`;
+  //           let onClick = "";
 
-            if (isClaimed) {
-              boxClass = "bg-yellow-500/30 border-2 border-yellow-500";
-              content = `<i data-lucide="check-circle" class="w-8 h-8 text-yellow-400 mx-auto"></i>`;
-            } else if (isClaimable) {
-              boxClass =
-                "bg-green-500/30 border-2 border-green-500 cursor-pointer animate-pulse";
-              content = `<div class="font-bold text-white">Claim</div><div class="text-xs text-green-300">${points} pts</div>`;
-              onClick = `onclick="app.claimDailyReward()"`;
-            }
+  //           if (isClaimed) {
+  //             boxClass = "bg-yellow-500/30 border-2 border-yellow-500";
+  //             content = `<i data-lucide="check-circle" class="w-8 h-8 text-yellow-400 mx-auto"></i>`;
+  //           } else if (isClaimable) {
+  //             boxClass =
+  //               "bg-green-500/30 border-2 border-green-500 cursor-pointer animate-pulse";
+  //             content = `<div class="font-bold text-white">Claim</div><div class="text-xs text-green-300">${points} pts</div>`;
+  //             onClick = `onclick="app.claimDailyReward()"`;
+  //           }
 
-            return `
-        <div class="rounded-lg p-2 aspect-square flex flex-col justify-center items-center ${boxClass}" ${onClick}>
-          ${content}
-        </div>
-      `;
-          })
-          .join("");
-      };
-      // --- End of New Code ---
+  //           return `
+  //       <div class="rounded-lg p-2 aspect-square flex flex-col justify-center items-center ${boxClass}" ${onClick}>
+  //         ${content}
+  //       </div>
+  //     `;
+  //         })
+  //         .join("");
+  //     };
+  //     // --- End of New Code ---
 
-      const latestAnnouncement = this.state.announcements[0];
-      const earnedBadges = (user.earnedBadgeIds || [])
-        .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
-        .filter(Boolean)
-        .slice(0, 10); // Show max 10 badges
+  //     const latestAnnouncement = this.state.announcements[0];
+  //     const earnedBadges = (user.earnedBadgeIds || [])
+  //       .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
+  //       .filter(Boolean)
+  //       .slice(0, 10); // Show max 10 badges
 
-      return `
+  //     return `
 
-        ${carouselHTML}
-
-
+  //       ${carouselHTML}
 
 
 
-    <div class="mb-4">
-      <h3 class="text-lg font-bold text-white mb-2">Daily Rewards</h3>
-      <div class="grid grid-cols-5 gap-2 text-center">
-        ${renderRewardBoxes()}
-      </div>
-    </div>
+
+
+  //   <div class="mb-4">
+  //     <h3 class="text-lg font-bold text-white mb-2">Daily Rewards</h3>
+  //     <div class="grid grid-cols-5 gap-2 text-center">
+  //       ${renderRewardBoxes()}
+  //     </div>
+  //   </div>
 
 
 
     
 
-    <!-- CARD LIKE CONTAINER -->
-    <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
-        <div class="bg-gray-800 rounded-xl p-4 space-y-4">
-            <div class="flex space-x-4 items-center">
-                <img src="${
-                  user.profilePic
-                }" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
-                <div class="flex-1">
-                    <h2 class="text-l font-bold">${user.firstName} ${ user.lastName}</h2>
-                <div class="flex items-center  text-2xl font-bold pride-gradient-text mb-1">
-                    <i data-lucide="circle-star" class="w-7 h-7 mr-2 pride-gradient-text"></i>
-                    <span>${user.points || 0}</span><span class="text-sm pride-gradient-text ml-1"> PTS</span>
-                </div>
-                    <p class="text-sm text-gray-400"> ${ user.email || "N/A"   }</p>
-                </div>
+  //   <!-- CARD LIKE CONTAINER -->
+  //   <div class="pride-gradient-bg p-1 rounded-2xl shadow-lg">
+  //       <div class="bg-gray-800 rounded-xl p-4 space-y-4">
+  //           <div class="flex space-x-4 items-center">
+  //               <img src="${
+  //                 user.profilePic
+  //               }" class="w-20 h-20 rounded-full object-cover border-4 border-gray-700">
+  //               <div class="flex-1">
+  //                   <h2 class="text-l font-bold">${user.firstName} ${ user.lastName}</h2>
+  //               <div class="flex items-center  text-2xl font-bold pride-gradient-text mb-1">
+  //                   <i data-lucide="circle-star" class="w-7 h-7 mr-2 pride-gradient-text"></i>
+  //                   <span>${user.points || 0}</span><span class="text-sm pride-gradient-text ml-1"> PTS</span>
+  //               </div>
+  //                   <p class="text-sm text-gray-400"> ${ user.email || "N/A"   }</p>
+  //               </div>
 
-                <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
-                    <canvas id="member-qr-code"></canvas>
-                </div>
+  //               <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
+  //                   <canvas id="member-qr-code"></canvas>
+  //               </div>
 
-            </div>
-            ${
-              earnedBadges.length > 0
-                ? `
-            <div class="border-t border-gray-700 pt-3">
-                <div class="flex items-center justify-center space-x-3">
-                    ${earnedBadges
-                      .map((badge) =>
-                        this.renderBadgeIcon(
-                          badge.icon,
-                          "w-6 h-6 text-amber-400"
-                        )
-                      )
-                      .join("")}
-                </div>
-            </div>`
-                : ""
-            }
-        </div>
-    </div>
+  //           </div>
+  //           ${
+  //             earnedBadges.length > 0
+  //               ? `
+  //           <div class="border-t border-gray-700 pt-3">
+  //               <div class="flex items-center justify-center space-x-3">
+  //                   ${earnedBadges
+  //                     .map((badge) =>
+  //                       this.renderBadgeIcon(
+  //                         badge.icon,
+  //                         "w-6 h-6 text-amber-400"
+  //                       )
+  //                     )
+  //                     .join("")}
+  //               </div>
+  //           </div>`
+  //               : ""
+  //           }
+  //       </div>
+  //   </div>
 
             
-    <br>
-    <div class="grid grid-cols-2 gap-4">
-        <button onclick="app.navigateTo('scanner')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-            <i data-lucide="scan-line" class="text-pink-400"></i>
-            <span class="font-semibold">Scan QR Code</span>
-        </button>
-        <button onclick="app.navigateTo('profile')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-            <i data-lucide="user-circle" class="text-purple-400"></i>
-            <span class="font-semibold">My Profile</span>
-        </button>
-    </div>
-    <br>
-    <div class="grid grid-cols-2 gap-4">
-        <button onclick="app.navigateTo('facebookFeed')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-            <i data-lucide="facebook" class="text-blue-400"></i>
-            <span class="font-semibold">BBGS Updates</span>
-        </button>
-        <button onclick="app.navigateTo('qrSpots')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-            <i data-lucide="map-pin" class="text-green-400"></i>
-            <span class="font-semibold">QR Spots</span>
-        </button>
-        <button onclick="app.navigateTo('games')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-            <i data-lucide="gamepad-2" class="text-purple-400"></i>
-            <span class="font-semibold">Games</span>
-        </button>
-        <button onclick="app.navigateTo('leaderboard')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
-            <i data-lucide="bar-chart-3" class="text-blue-400"></i>
-            <span class="font-semibold">Ranks</span>
-        </button>
-    </div>
-    <br>
-    <div class="space-y-6">
-        ${
-          latestAnnouncement
-            ? `
-        <div class="bg-gray-900/50 p-4 rounded-xl border-l-4 border-pink-500">
-            <div class="flex items-center justify-between mb-1">
-                <h3 class="font-bold text-lg text-pink-400">Announcement</h3>
-                <p class="text-xs text-gray-400">${latestAnnouncement.timestamp}</p>
-            </div>
-            <p class="text-gray-300">${latestAnnouncement.message}</p>
-        </div>`
-            : ""
-        }
-    </div>
-  `;
-    },
+  //   <br>
+  //   <div class="grid grid-cols-2 gap-4">
+  //       <button onclick="app.navigateTo('scanner')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+  //           <i data-lucide="scan-line" class="text-pink-400"></i>
+  //           <span class="font-semibold">Scan QR Code</span>
+  //       </button>
+  //       <button onclick="app.navigateTo('profile')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+  //           <i data-lucide="user-circle" class="text-purple-400"></i>
+  //           <span class="font-semibold">My Profile</span>
+  //       </button>
+  //   </div>
+  //   <br>
+  //   <div class="grid grid-cols-2 gap-4">
+  //       <button onclick="app.navigateTo('facebookFeed')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+  //           <i data-lucide="facebook" class="text-blue-400"></i>
+  //           <span class="font-semibold">BBGS Updates</span>
+  //       </button>
+  //       <button onclick="app.navigateTo('qrSpots')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+  //           <i data-lucide="map-pin" class="text-green-400"></i>
+  //           <span class="font-semibold">QR Spots</span>
+  //       </button>
+  //       <button onclick="app.navigateTo('games')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+  //           <i data-lucide="gamepad-2" class="text-purple-400"></i>
+  //           <span class="font-semibold">Games</span>
+  //       </button>
+  //       <button onclick="app.navigateTo('leaderboard')" class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+  //           <i data-lucide="bar-chart-3" class="text-blue-400"></i>
+  //           <span class="font-semibold">Ranks</span>
+  //       </button>
+  //   </div>
+  //   <br>
+  //   <div class="space-y-6">
+  //       ${
+  //         latestAnnouncement
+  //           ? `
+  //       <div class="bg-gray-900/50 p-4 rounded-xl border-l-4 border-pink-500">
+  //           <div class="flex items-center justify-between mb-1">
+  //               <h3 class="font-bold text-lg text-pink-400">Announcement</h3>
+  //               <p class="text-xs text-gray-400">${latestAnnouncement.timestamp}</p>
+  //           </div>
+  //           <p class="text-gray-300">${latestAnnouncement.message}</p>
+  //       </div>`
+  //           : ""
+  //       }
+  //   </div>
+  // `;
+  //   },
 
 // in script.js, inside the this.templates object
 
@@ -1572,6 +1630,11 @@ dashboard: () => {
             <i data-lucide="shield-alert" class="w-16 h-16 mx-auto text-amber-400 mb-4"></i>
             <h2 class="text-2xl font-bold mb-2">Account Pending Approval</h2>
             <p class="text-gray-400">Your account is registered. An administrator will review it shortly, granting full access upon approval.</p>
+            <div style="position: relative; width: 100%; height: 0; padding-top: 177.7778%;padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;border-radius: 8px; will-change: transform;">
+              <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
+            src="https://www.canva.com/design/DAGy3ERSjCo/4e2CdzmxIShB6KdG7Jui2w/view?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
+            </iframe>
+            </div>
         </div>
       `;
   }
@@ -1925,7 +1988,7 @@ dashboard: () => {
   <div class="flex-1">
     <p class="font-bold">${user.firstName} ${user.lastName}</p>
     <p class="text-sm text-gray-400">
-  ${user.skills && user.skills.length > 25 ? user.skills.substring(0, 25) + '...' : user.skills || 'No skills listed'}
+  ${user.skills && user.skills.length > 15 ? user.skills.substring(0, 15) + '...' : user.skills || "No skills listed"}
 </p>
   </div>
   
@@ -2106,14 +2169,13 @@ dashboard: () => {
 
                 </div>
 
-                <div style="position: relative; width: 100%; height: 0; padding-top: 177.7778%;
+                <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%;
  padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;
  border-radius: 8px; will-change: transform;">
   <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
-    src="https://www.canva.com/design/DAGy3ERSjCo/4e2CdzmxIShB6KdG7Jui2w/view?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
+    src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
   </iframe>
 </div>
-
 
                 <p class="text-center text-xs text-gray-500 pt-4">App Version 2.0.2 (BBGS Pride Pass QR Code System) <br> © 2025 BBGS Dev Tootz </p>
             </div>
@@ -2262,25 +2324,9 @@ dashboard: () => {
 
     admin: () => {
       const unverifiedUsers = this.state.users.filter((u) => !u.isValidated);
-      const filteredRewards = this.state.adminRewards.filter(
-        (r) =>
-          r.name &&
-          typeof r.name === "string" &&
-          r.name.toLowerCase().includes(this.state.adminRewardSearch)
-      );
-      const filteredMembers = this.state.users.filter(
-        (u) =>
-          u.isValidated &&
-          u.email !== this.state.adminEmail &&
-          (u.firstName + " " + u.lastName)
-            .toLowerCase()
-            .includes(this.state.adminMemberSearch)
-      );
-      const editingReward = this.state.adminEditingRewardId
-        ? this.state.rewards.find(
-            (r) => r.id === this.state.adminEditingRewardId
-          )
-        : null;
+      const filteredRewards = this.state.adminRewards.filter((r) =>r.name && typeof r.name === "string" & r.name.toLowerCase().includes(this.state.adminRewardSearch));
+      const filteredMembers = this.state.users.filter((u) => u.isValidated && u.email !== this.state.adminEmail && (u.firstName + " " + u.lastName).toLowerCase().includes(this.state.adminMemberSearch));
+      const editingReward = this.state.adminEditingRewardId ? this.state.rewards.find((r) => r.id === this.state.adminEditingRewardId) : null;
 
       // Logic for filtering logs
       const filteredLogs = this.state.systemLogs.filter((log) => {
@@ -2293,70 +2339,87 @@ dashboard: () => {
         return true;
       });
 
-      return `<h2 class="text-2xl font-bold text-center mb-6">Admin Panel</h2><div x-data="{ tab: '${
-        this.state.adminActiveTab
-      }' }" @tab-change.window="tab = $event.detail" class="bg-gray-900 rounded-xl p-2"><div class="flex flex-wrap justify-center gap-2 mb-4"><button @click="tab = 'verification'" :class="{ 'pride-gradient-bg text-white': tab === 'verification', 'bg-gray-700 text-gray-300': tab !== 'verification' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Verification <span class="bg-pink-500 text-white text-xs font-bold rounded-full px-2 ml-1">${
-        unverifiedUsers.length
-      }</span></button><button @click="tab = 'members'" :class="{ 'pride-gradient-bg text-white': tab === 'members', 'bg-gray-700 text-gray-300': tab !== 'members' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Members</button><button @click="tab = 'events'" :class="{ 'pride-gradient-bg text-white': tab === 'events', 'bg-gray-700 text-gray-300': tab !== 'events' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Events</button><button @click="tab = 'rewards'" :class="{ 'pride-gradient-bg text-white': tab === 'rewards', 'bg-gray-700 text-gray-300': tab !== 'rewards' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Rewards</button><button @click="tab = 'badges'" :class="{ 'pride-gradient-bg text-white': tab === 'badges', 'bg-gray-700 text-gray-300': tab !== 'badges' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Badges</button>
-                <button @click="tab = 'announcements'" :class="{ 'pride-gradient-bg text-white': tab === 'announcements', 'bg-gray-700 text-gray-300': tab !== 'announcements' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Announce</button>
-                <button @click="tab = 'mapSpots'" :class="{ 'pride-gradient-bg text-white': tab === 'mapSpots', 'bg-gray-700 text-gray-300': tab !== 'mapSpots' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Map Spots</button>
-               
-               
+      return `
+<!-- ADMIN PANEL -->
+      <h2 class="text-2xl font-bold text-center mb-6">Admin Panel</h2>
+        <div x-data="{ tab: '${this.state.adminActiveTab}' }" @tab-change.window="tab = $event.detail" class="bg-gray-900 rounded-xl p-2">
+          <div class="flex flex-wrap justify-center gap-2 mb-4">
 
-                
-                <button @click="tab = 'scan'" :class="{ 'pride-gradient-bg text-white': tab === 'scan', 'bg-gray-700 text-gray-300': tab !== 'scan' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Scan QR</button><button @click="tab = 'logs'" :class="{ 'pride-gradient-bg text-white': tab === 'logs', 'bg-gray-700 text-gray-300': tab !== 'logs' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Logs</button></div><div x-show="tab === 'verification'"><h3 class="font-semibold text-lg mb-2 text-center">Pending Approvals</h3><div class="space-y-2">${
-                  unverifiedUsers
-                    .map(
-                      (user) =>
-                        `<div class="bg-gray-700 p-3 rounded-lg"><div class="flex items-center justify-between"> 
-                          <div class="flex items-center space-x-3"><img src="${user.profilePic}" class="w-10 h-10 rounded-full object-cover"><div>
-                          <p class="font-semibold">${user.firstName} ${user.lastName}</p>
-                          <p class="text-xs text-gray-400">${user.email}</p>
-                          </div>
-                         </div>
-                         
-                         <div class="flex space-x-2">
-                            <button onclick="app.handleAdminApproveUser('${user.id}')" class="p-2 bg-green-500/20 text-green-400 rounded-md"><i data-lucide="check"></i></button>
-                            <button onclick="app.handleAdminDeleteUser('${user.id}')" class="p-2 bg-red-500/20 text-red-400 rounded-md"><i data-lucide="x"></i></button>
-                          </div></div></div>`
-                    )
-                    .join("") ||
-                  '<p class="text-gray-400 text-center py-4">No new users to verify.</p>'
-                }</div></div><div x-show="tab === 'events'"><div class="bg-gray-800 p-4 rounded-lg mb-4"><h3 class="font-semibold text-lg mb-4">Create New Event</h3><form id="create-event-form" class="space-y-4"><input name="eventName" type="text" placeholder="Event Name" required class="w-full bg-gray-700 rounded-lg p-3"><input name="eventDate" type="datetime-local" required class="w-full bg-gray-700 rounded-lg p-3 text-white"><textarea name="eventDescription" placeholder="Event Description (optional)" class="w-full bg-gray-700 rounded-lg p-3 h-24"></textarea><input name="eventPoints" type="number" placeholder="Points Value" required class="w-full bg-gray-700 rounded-lg p-3"><select name="badgeId" class="w-full bg-gray-700 rounded-lg p-3"><option value="">No Badge for this Event</option>
-                ${this.state.badges
-                  .map(
-                    (badge) =>
-                      `<option value="${badge.id}">${badge.name}</option>`
-                  )
-                  .join(
-                    ""
-                  )}</select><div class="flex items-center space-x-2"><input type="checkbox" id="event-visible" name="isVisible" checked class="h-5 w-5 rounded accent-pink-500"><label for="event-visible">Visible to Members</label></div><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Create Event</button></form></div><h3 class="font-semibold text-lg mb-4">Managed Events</h3><div id="events-list" class="space-y-2">${
-        this.state.events
-          .map(
-            (event) =>
+          <!-- ADMIN BUTTONS -->
+
+            <button @click="tab = 'verification'" :class="{ 'pride-gradient-bg text-white': tab === 'verification', 'bg-gray-700 text-gray-300': tab !== 'verification' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Verification 
+              <span class="bg-pink-500 text-white text-xs font-bold rounded-full px-2 ml-1">${unverifiedUsers.length}</span>
+            </button>
+            <button @click="tab = 'members'" :class="{ 'pride-gradient-bg text-white': tab === 'members', 'bg-gray-700 text-gray-300': tab !== 'members' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Members</button>
+            <button @click="tab = 'events'" :class="{ 'pride-gradient-bg text-white': tab === 'events', 'bg-gray-700 text-gray-300': tab !== 'events' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Events</button>
+            <button @click="tab = 'rewards'" :class="{ 'pride-gradient-bg text-white': tab === 'rewards', 'bg-gray-700 text-gray-300': tab !== 'rewards' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Rewards</button>
+            <button @click="tab = 'badges'" :class="{ 'pride-gradient-bg text-white': tab === 'badges', 'bg-gray-700 text-gray-300': tab !== 'badges' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Badges</button>
+            <button @click="tab = 'announcements'" :class="{ 'pride-gradient-bg text-white': tab === 'announcements', 'bg-gray-700 text-gray-300': tab !== 'announcements' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Announce</button>
+            <button @click="tab = 'mapSpots'" :class="{ 'pride-gradient-bg text-white': tab === 'mapSpots', 'bg-gray-700 text-gray-300': tab !== 'mapSpots' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Map Spots</button>
+            <button @click="tab = 'scan'" :class="{ 'pride-gradient-bg text-white': tab === 'scan', 'bg-gray-700 text-gray-300': tab !== 'scan' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Scan QR</button><button @click="tab = 'logs'" :class="{ 'pride-gradient-bg text-white': tab === 'logs', 'bg-gray-700 text-gray-300': tab !== 'logs' }" class="flex-1 py-2 px-3 rounded-lg font-semibold text-sm">Logs</button>
+          </div>
+          
+          <!-- ADMIN PENDING APPROVAL -->
+          <div x-show="tab === 'verification'">
+            <h3 class="font-semibold text-lg mb-2 text-center">Pending Approvals</h3>
+            <div class="space-y-2">${unverifiedUsers.map((user) =>
+              `<div class="bg-gray-700 p-3 rounded-lg">
+                <div class="flex items-center justify-between"> 
+                  <div class="flex items-center space-x-3"><img src="${user.profilePic}" class="w-10 h-10 rounded-full object-cover">
+                    <div>
+                      <p class="font-semibold">${user.firstName} ${user.lastName}</p>
+                      <p class="text-xs text-gray-400">${user.email}</p>
+                    </div>
+                  </div>
+                  <div class="flex space-x-2">
+                      <button onclick="app.handleAdminApproveUser('${user.id}')" class="p-2 bg-green-500/20 text-green-400 rounded-md"><i data-lucide="check"></i></button>
+                      <button onclick="app.handleAdminDeleteUser('${user.id}')" class="p-2 bg-red-500/20 text-red-400 rounded-md"><i data-lucide="x"></i></button>
+                  </div>
+                </div>
+              </div>`
+            )
+            .join("") ||
+          '<p class="text-gray-400 text-center py-4">No new users to verify.</p>'
+            }
+            </div>
+          </div>
+          
+          <!-- ADMIN CREATE EVENT -->
+          <div x-show="tab === 'events'">
+            <div class="bg-gray-800 p-4 rounded-lg mb-4">
+              <h3 class="font-semibold text-lg mb-4">Create New Event</h3>
+
+              <!-- ADMIN CREATE EVENT FORM -->
+              <form id="create-event-form" class="space-y-4"><input name="eventName" type="text" placeholder="Event Name" required class="w-full bg-gray-700 rounded-lg p-3">
+                <input name="eventDate" type="datetime-local" required class="w-full bg-gray-700 rounded-lg p-3 text-white">
+                <textarea name="eventDescription" placeholder="Event Description (optional)" class="w-full bg-gray-700 rounded-lg p-3 h-24"></textarea>
+                <input name="eventPoints" type="number" placeholder="Points Value" required class="w-full bg-gray-700 rounded-lg p-3">
+                  <select name="badgeId" class="w-full bg-gray-700 rounded-lg p-3">
+                    <option value="">No Badge for this Event</option>
+                    ${this.state.badges.map((badge) => `<option value="${badge.id}">${badge.name}</option>`).join("")}
+                  </select>
+                <div class="flex items-center space-x-2">
+                  <input type="checkbox" id="event-visible" name="isVisible" checked class="h-5 w-5 rounded accent-pink-500">
+                  <label for="event-visible">Visible to Members</label>
+                </div>
+                <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Create Event</button>
+              </form>
+            </div>
+
+            <!-- ADMIN LIST OF MANAGED EVENTS -->
+            <h3 class="font-semibold text-lg mb-4">Managed Events</h3>
+            <div id="events-list" class="space-y-2">${this.state.events.map((event) =>
               `<div class="bg-gray-700 p-3 rounded-lg flex items-center justify-between">
               <div><p class="font-semibold">${event.name}</p>
               <p class="text-sm text-amber-400">${event.points} Points</p>
-              </div><button onclick="app.openEventDetailsModal('${event.id}')" class="text-xs text-pink-400 hover:underline">View Details</button>
-              
+              </div><button onclick="app.openEventDetailsModal('${event.id}')" class="text-xs text-pink-400 hover:underline">View Details</button>            
             </div>`
           )
           .join("") ||
         '<p class="text-gray-400 text-center">No events created.</p>'
       }</div></div>
            
-           <div class="mt-4">
-<button onclick="app.openAdminMapPanel()" class="w-full bg-gray-700 hover:bg-gray-600 p-4 rounded-lg flex items-center justify-between">
-    <span class="font-semibold text-lg">Manage QR Code Spots</span>
-    <i data-lucide="map"></i>
-</button>
-
-
-</div>
-
-
-           
-           
+          <!-- ADMIN REWARDS -->
                 <div x-show="tab === 'rewards'" style="display: none;">
                 <div id="reward-form-panel" class="bg-gray-800 p-4 rounded-lg mb-4">
                     <h3 class="font-semibold text-lg mb-4">${
@@ -2478,6 +2541,9 @@ dashboard: () => {
         '<p class="text-gray-400 text-center">No rewards found.</p>'
       }</div>
                 </div>
+            
+
+      <!-- ADMIN MEMBERS -->
                 <div x-show="tab === 'members'" style="display: none;"><div class="bg-gray-800 p-4 rounded-lg mb-4 flex justify-between items-center">
                     <h3 class="font-semibold text-lg">Add New Member</h3>
                     <button onclick="app.openAddMemberModal()" class="pride-gradient-bg text-white font-semibold px-4 py-2 rounded-lg text-sm">Add Account</button></div><h3 class="font-semibold text-lg mb-2">Registered Members</h3><input type="search" oninput="app.handleAdminSearch('member', this.value)" placeholder="Search members by name..." class="w-full bg-gray-700 rounded-lg p-3 mb-4"><div id="members-list" class="space-y-2">${
@@ -2507,15 +2573,52 @@ dashboard: () => {
           )
           .join("") ||
         '<p class="text-gray-400 text-center">No badges created.</p>'
-      }</div></div><div x-show="tab === 'announcements'" style="display: none;"><div class="bg-gray-800 p-4 rounded-lg mb-4"><h3 class="font-semibold text-lg mb-4">Post New Announcement</h3><form id="create-announcement-form" class="space-y-4"><textarea name="announcementMessage" placeholder="Your message here..." required class="w-full bg-gray-700 rounded-lg p-3 h-28"></textarea><button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Post Announcement</button></form></div>
-      <h3 class="font-semibold text-lg mb-2">Recent An    nouncements</h3>
-      <div class="space-y-2">${this.state.announcements.map((item) =>
-              `<div class="bg-gray-700 p-3 rounded-lg"> <p>${item.message}</p> <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-600"> <p class="text-xs text-gray-400">${item.timestamp}</p> 
-              <button onclick="app.handleDeleteAnnouncement('${item.id}')" class="p-1 text-red-400 hover:bg-red-900/50 rounded-md"><i data-lucide="trash-2" class="w-4 h-4"></i></button> </div> </div>`
-          )
-          .join("") ||
+      }</div></div>
+      
+      <!-- ADMIN ANNOUNCEMENT -->
+      <div x-show="tab === 'announcements'" style="display: none;">
+  <!-- ANNOUNCEMENT FORM -->
+  <div class="bg-gray-800 p-4 rounded-lg mb-4">
+    <h3 id="announcement-form-title" class="font-semibold text-lg mb-4">Post New Announcement</h3>
+    <form id="announcement-form" class="space-y-4">
+      
+      <!-- Hidden input to store the ID of the announcement being edited -->
+      <input type="hidden" name="announcementId">
+      
+      <input type="text" name="announcementTitle" placeholder="Announcement Title" required class="w-full bg-gray-700 rounded-lg p-3">
+      <textarea name="announcementMessage" placeholder="Your message here..." required class="w-full bg-gray-700 rounded-lg p-3 h-28"></textarea>
+      
+      <div class="flex space-x-2">
+        <button id="announcement-submit-btn" type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Post Announcement</button>
+        
+        <!-- Cancel button, hidden by default -->
+        <button id="cancel-edit-btn" type="button" onclick="app.handleCancelEdit()" class="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hidden">Cancel</button>
+      </div>
+    </form>
+  </div>
+  
+      
+      <h3 class="font-semibold text-lg mb-2">Recent Announcements</h3>
+      <div class="space-y-2">${this.state.announcements.map((item) => 
+        `<div class="bg-gray-700 p-3 rounded-lg">
+          <h4 class="font-semibold">${item.title || "No Title"}</h4>
+          <p>${item.message}</p> 
+          <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-600">
+          <p class="text-xs text-gray-400">${item.timestamp}</p> 
+          <div class="flex space-x-2">
+          <button onclick="app.handleEditClick('${item.id}')" class="p-1 text-blue-400 hover:bg-blue-900/50 rounded-md"> <i data-lucide="pencil" class="w-4 h-4"></i> </button>
+          <button onclick="app.handleDeleteAnnouncement('${item.id}')" class="p-1 text-red-400 hover:bg-red-900/50 rounded-md"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+         </div>
+        </div>
+      </div>`).join("") ||
         '<p class="text-gray-400 text-center">No announcements yet.</p>'
-      }</div></div><div x-show="tab === 'scan'" style="display: none;"><h3 class="font-semibold text-lg mb-2">Award via QR Scan</h3><div class="space-y-4 bg-gray-700 p-4 rounded-lg"><p class="text-sm text-gray-300">Select a reward or badge to give to the member upon scanning their QR code.</p>
+      }</div></div>
+
+
+ 
+      
+      <!-- ADMIN SCAN QR CODE -->
+      <div x-show="tab === 'scan'" style="display: none;"><h3 class="font-semibold text-lg mb-2">Award via QR Scan</h3><div class="space-y-4 bg-gray-700 p-4 rounded-lg"><p class="text-sm text-gray-300">Select a reward or badge to give to the member upon scanning their QR code.</p>
                            <div> <label for="admin-reward-select" class="block text-sm font-medium text-gray-300 mb-1">Select Reward</label><select id="admin-reward-select" class="w-full bg-gray-800 rounded-lg p-3 outline-none"><option value="">-- No Reward --</option>${this.state.adminRewards
                              .map(
                                (r) =>
@@ -2603,7 +2706,6 @@ dashboard: () => {
 
 
 //FETCH ANNOUNCEMENT
-
 this.fetchAnnouncements = async () => {
   try {
     const { getFirestore, collection, query, getDocs, orderBy } = this.fb;
@@ -5014,18 +5116,35 @@ this.toggleAnnouncement = (element) => {
     this.state.adminActiveTab = "rewards";
   };
 
-  this.handleCreateAnnouncement = async (e) => {
-    e.preventDefault();
-    const message = e.target.elements.announcementMessage.value;
-    if (message) {
-      await addDoc(collection(this.fb.db, this.paths.announcements), {
-        message,
-        timestamp: new Date().toLocaleString(),
-      });
-      e.target.reset();
-      this.state.adminActiveTab = "announcements";
-    }
-  };
+  // This single function now handles both creating and updating
+this.handleSubmitAnnouncement = async (e) => {
+  e.preventDefault();
+  
+  // Get all data from the form, including the hidden ID
+  const id = e.target.elements.announcementId.value;
+  const title = e.target.elements.announcementTitle.value;
+  const message = e.target.elements.announcementMessage.value;
+  
+  if (!title || !message) return; // Basic validation
+
+  if (id) {
+    // If an ID exists, we are UPDATING an existing announcement
+    const docRef = doc(this.fb.db, this.paths.announcements, id);
+    await updateDoc(docRef, { title, message });
+    this.showModal("success", "Updated!", "Announcement has been updated.");
+  } else {
+    // If no ID exists, we are CREATING a new announcement
+    await addDoc(collection(this.fb.db, this.paths.announcements), {
+      title,
+      message,
+      timestamp: new Date().toLocaleString(),
+    });
+  }
+  
+  // After either creating or updating, reset the form to its original state
+  this.handleCancelEdit();
+  this.state.adminActiveTab = "announcements"; // Re-render the view
+};
   
 
   this.handleDeleteAnnouncement = async (id) => {
@@ -6030,6 +6149,7 @@ this.toggleAnnouncement = (element) => {
       .getElementById("admin-edit-event-form")
       .addEventListener("submit", this.handleAdminUpdateEvent.bind(this));
   };
+
   this.openBadgeDetailsModal = (name, description, icon, earned) => {
     const content = `<div class="text-center space-y-4"><div class="mx-auto w-32 h-32 flex items-center justify-center">${this.renderBadgeIcon(
       icon,
@@ -6039,6 +6159,7 @@ this.toggleAnnouncement = (element) => {
     }">${earned ? "✓ Earned" : "Not Yet Earned"}</p></div>`;
     this.openFullscreenModal("Badge Details", content);
   };
+
   this.showModal = (type, title, message, onConfirm = null) => {
     const icons = {
       success:
@@ -6082,6 +6203,8 @@ this.toggleAnnouncement = (element) => {
     this.elements.modal.classList.remove("hidden");
   };
 };
+
+
 const app = new App();
 window.app = app; // Make app globally accessible for inline event handlers
 
@@ -6097,6 +6220,9 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (e.target.id === "register-form") {
       e.preventDefault();
       app.handleRegister(e);
+    }else if (e.target.id === "announcement-form") {
+      e.preventDefault();
+      app.handleSubmitAnnouncement(e);
     }
   });
 
