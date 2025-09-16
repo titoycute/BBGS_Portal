@@ -236,12 +236,9 @@ this.renderDashboardProfile = (user) => {
   return `
     <div class="relative">
         
-        <!-- START: This is the new glow element -->
+        
         <div class="absolute -inset-1.5 pride-gradient-bg rounded-2xl blur-lg opacity-75"></div>
-        <!-- END: New glow element -->
-
-        <!-- Your original card, now with position: relative to sit on top -->
-        <div class="relative pride-gradient-bg p-1 rounded-2xl shadow-lg">
+            <div class="relative pride-gradient-bg p-1 rounded-2xl shadow-lg">
             <div class="bg-gray-800 rounded-xl p-4 space-y-4">
                 
                 <!-- START: ADD THIS NEW TITLE SECTION -->
@@ -289,7 +286,7 @@ this.renderDashboardProfile = (user) => {
 // DASHBOARD CAROUSEL IMAGE
 this.renderDashboardCarousel = () => {
   const carouselItems = [
-    { imageUrl: "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/236ecf96-a881-428d-9213-83d1c7313131/dkjb7ys-6e27b054-35e1-4c99-91b6-5e3ebe8029b2.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi8yMzZlY2Y5Ni1hODgxLTQyOGQtOTIxMy04M2QxYzczMTMxMzEvZGtqYjd5cy02ZTI3YjA1NC0zNWUxLTRjOTktOTFiNi01ZTNlYmU4MDI5YjIuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.Fx-xYq9arp5HBxve6Wkza7nuTOmuMGrFuHQ_O3xPjTo", link: "rewards" },
+    { imageUrl: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNzIwNW9pdzMyOTFna2ZjZ2V6dWZqMnJtNWg0N2x6NXJqdTQ4ZHN3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/TvG2o6Bob9saazDlu8/giphy.gif", link: "rewards" },
     { imageUrl: "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/236ecf96-a881-428d-9213-83d1c7313131/dkjb4v0-af1ec6b9-6075-4a3c-b662-ed5512cb6fbf.png/v1/fit/w_800,h_450,q_70,strp/director_by_titoycute_dkjb4v0-414w-2x.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NDUwIiwicGF0aCI6Ii9mLzIzNmVjZjk2LWE4ODEtNDI4ZC05MjEzLTgzZDFjNzMxMzEzMS9ka2piNHYwLWFmMWVjNmI5LTYwNzUtNGEzYy1iNjYyLWVkNTUxMmNiNmZiZi5wbmciLCJ3aWR0aCI6Ijw9ODAwIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0.kIGGldx0F4f2G3KM_9AgMEk0QdiFctJP3vJbB8MhjOU", link: "directory" },
     { imageUrl: "https://i.pinimg.com/1200x/fe/4d/a1/fe4da1dd4b4a61e5717ef1c73a169c99.jpg", link: "leaderboard" }
   ];
@@ -1467,12 +1464,19 @@ announcements: () => {
                             <input name="password" type="password" placeholder="Password" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
                             <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95">Log In</button>
                           
+
+                             <a href="http://tinyurl.com/PridePassApp" target="_blank" class="flex items-center justify-center w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-green-700">
+                            <i data-lucide="smartphone" class="w-5 h-5 mr-2"></i>
+                            <span>Download Android App</span>
+                              </a>
+
+
                                 <!-- CANVA VIDEO -->
                                 <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%; padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden; border-radius: 8px; will-change: transform;">
                                   <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;" src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1"></iframe>
                                 </div>                            
                           </form>
-                      </div>
+                    </div>
                     <!-- REGISTER FORM -->
                     <div x-show="tab === 'register'" style="display: none;">
                       <form id="register-form" class="space-y-4 p-4">
@@ -3120,7 +3124,7 @@ this.toggleAnnouncement = (element) => {
           }
         });
         break;
-        case "userguide":
+      case "userguide":
           html = this.views.userguide();
           break;
     }
