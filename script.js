@@ -228,11 +228,7 @@ this.scrollCarousel = (direction) => {
 
 //PROFILE CARD
 this.renderDashboardProfile = (user) => {
-  const earnedBadges = (user.earnedBadgeIds || [])
-    .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
-    .filter(Boolean)
-    .slice(0, 10);
-
+  const earnedBadges = (user.earnedBadgeIds || []).map((badgeId) => this.state.badges.find((b) => b.id === badgeId)).filter(Boolean).slice(0, 10);
   return `
     <div class="relative">
         
@@ -399,6 +395,11 @@ this.renderDashboardActions = () => {
             <i data-lucide="book-open" class="text-yellow-400"></i>
             <span class="font-semibold text-xs">User Guide</span>
         </button>
+
+         <button onclick="app.navigateTo('badges')"class="bg-gray-700 p-4 rounded-xl flex flex-col items-center justify-center space-y-2 hover:bg-gray-600 transition-colors">
+           <i data-lucide="circle-star" class="text-green-400"></i>
+            <span class="text-xs mt-1">Badges</span>
+          </button>
       </div>
     `;
 };
@@ -643,6 +644,7 @@ this.stopDailyRewardTimer = () => {
     </svg>`;
     this.elements.modalButtons.innerHTML = ""; // No buttons for loading
     this.elements.modal.classList.remove("hidden");
+    
   };
 
   this.hideLoading = () => {
@@ -1477,23 +1479,89 @@ announcements: () => {
                                 </div>                            
                           </form>
                     </div>
-                    <!-- REGISTER FORM -->
-                    <div x-show="tab === 'register'" style="display: none;">
-                      <form id="register-form" class="space-y-4 p-4">
-                        <div class="grid grid-cols-2 gap-4">
-                          <input name="firstName" type="text" placeholder="First Name*" required class="w-full bg-gray-700 rounded-lg p-3">
-                          <input name="lastName" type="text" placeholder="Last Name*" required class="w-full bg-gray-700 rounded-lg p-3">
-                          <input name="middleName" type="text" placeholder="Middle Name" class="w-full bg-gray-700 rounded-lg p-3">
-                          <input name="suffix" type="text" placeholder="Suffix" class="w-full bg-gray-700 rounded-lg p-3">
-                        </div>
-                        <input name="skills" type="text" placeholder="Skills/Talents (e.g., Host, Singer)" required class="w-full bg-gray-700 rounded-lg p-3">
-                        <input name="contact" type="tel" placeholder="Contact Number*" required class="w-full bg-gray-700 rounded-lg p-3">
-                        <input name="social" type="text" placeholder="Social Media Address" class="w-full bg-gray-700 rounded-lg p-3">
-                        <input name="email" type="email" placeholder="Email Address*" required class="w-full bg-gray-700 rounded-lg p-3">
-                        <input name="password" type="password" placeholder="Password*" required class="w-full bg-gray-700 rounded-lg p-3">
-                        <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold">Create My Account</button>
-                      </form>
-                    </div>
+                    
+                   <!-- REGISTER FORM -->
+<div x-show="tab === 'register'" style="display: none;">
+    <form id="register-form" class="space-y-4 p-4" x-data="{ gender: '', pronouns: '', orientation: '' }">
+        <div class="grid grid-cols-2 gap-4">
+            <input name="firstName" type="text" placeholder="First Name*" required class="w-full bg-gray-700 rounded-lg p-3">
+            <input name="lastName" type="text" placeholder="Last Name*" required class="w-full bg-gray-700 rounded-lg p-3">
+            
+        </div>
+<input name="preferredName" type="text" placeholder="Preferred Name" class="w-full bg-gray-700 rounded-lg p-3">
+        <!-- START: New Inclusive Fields -->
+        <div>
+            <label class="text-sm text-gray-400">Pronouns*</label>
+            <select name="pronouns" x-model="pronouns" required class="w-full bg-gray-700 rounded-lg p-3 mt-1">
+                <option value="" disabled>Select your pronouns...</option>
+                <option value="She/Her">She/Her</option>
+                <option value="He/Him">He/Him</option>
+                <option value="They/Them">They/Them</option>
+                <option value="Other">Other / Prefer to self-describe</option>
+            </select>
+            <input x-show="pronouns === 'Other'" type="text" name="pronounsOther" placeholder="Please specify your pronouns" class="w-full bg-gray-700 rounded-lg p-3 mt-2">
+        </div>
+
+        <div>
+            <label class="text-sm text-gray-400">Gender Identity*</label>
+            <select name="gender" x-model="gender" required class="w-full bg-gray-700 rounded-lg p-3 mt-1">
+                <option value="" disabled>Select your gender identity...</option>
+                <option value="Woman">Woman</option>
+                <option value="Man">Man</option>
+                <option value="Non-binary">Non-binary</option>
+                <option value="Transgender">Transgender</option>
+                <option value="Questioning">Questioning</option>
+                <option value="Other">Other / Prefer to self-describe</option>
+            </select>
+            <input x-show="gender === 'Other'" type="text" name="genderOther" placeholder="Please specify your gender" class="w-full bg-gray-700 rounded-lg p-3 mt-2">
+        </div>
+        
+        <div>
+            <label class="text-sm text-gray-400">Sexual Orientation (Optional)</label>
+            <select name="orientation" x-model="orientation" class="w-full bg-gray-700 rounded-lg p-3 mt-1">
+                <option value="">Select your orientation...</option>
+                <option value="Lesbian">Lesbian</option>
+                <option value="Gay">Gay</option>
+                <option value="Bisexual">Bisexual</option>
+                <option value="Pansexual">Pansexual</option>
+                <option value="Asexual">Asexual</option>
+                <option value="Queer">Queer</option>
+                <option value="Straight">Straight / Heterosexual</option>
+                <option value="Questioning">Questioning</option>
+                <option value="Other">Other / Prefer to self-describe</option>
+            </select>
+            <input x-show="orientation === 'Other'" type="text" name="orientationOther" placeholder="Please specify your orientation" class="w-full bg-gray-700 rounded-lg p-3 mt-2">
+        </div>
+        <!-- END: New Inclusive Fields -->
+
+        <input name="skills" type="text" placeholder="Skills/Talents (e.g., Host, Singer)" required class="w-full bg-gray-700 rounded-lg p-3">
+        <input name="contact" type="tel" placeholder="Contact Number*" required class="w-full bg-gray-700 rounded-lg p-3">
+        <input name="email" type="email" placeholder="Email Address*" required class="w-full bg-gray-700 rounded-lg p-3">
+        <input name="password" type="password" placeholder="Password*" required class="w-full bg-gray-700 rounded-lg p-3">
+        <div class="flex items-start">
+            <input 
+                id="terms" 
+                name="terms" 
+                type="checkbox" 
+                onchange="app.handleTermsChange(this.checked)" 
+                class="h-4 w-4 mt-1 accent-pink-600 border-gray-500 rounded focus:ring-pink-500"
+            >
+            <label for="terms" class="ml-2 text-sm text-gray-400">
+                I agree to the <a href="#" class="text-pink-400 hover:underline">Terms and Conditions</a>.
+            </label>
+        </div>
+        <!-- END: Added Terms & Conditions Checkbox -->
+
+        <!-- The button is now disabled by default and has an ID -->
+        <button 
+            id="register-button" 
+            type="submit" 
+            disabled 
+            class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold transition-all duration-200 opacity-50 cursor-not-allowed"
+        >Create My Account</button>
+    </form>
+</div>
+
                 </div>
             </div>`,
 
@@ -2056,11 +2124,12 @@ dashboard: () => {
                 <p class="text-center text-xs text-gray-500 pt-4">App Version 2.0.2 (BBGS Pride Pass QR Code System) <br> © 2025 BBGS Dev Tootz </p>
             </div>
         `,
-    profile: () => {
+    
+    
+//MY PROFILE
+profile: () => {
       const user = this.state.loggedInUser;
-      const earnedBadges = this.state.earnedBadges
-        .map((earned) => this.state.badges.find((b) => b.id === earned.badgeId))
-        .filter(Boolean);
+      const earnedBadges = this.state.earnedBadges.map((earned) => this.state.badges.find((b) => b.id === earned.badgeId)).filter(Boolean);
       return `
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold">My Profile</h2>
@@ -2076,6 +2145,7 @@ dashboard: () => {
                     : '<p class="text-amber-400 font-bold">Pending Approval</p>'
                 }
             </div>
+
             <form id="profile-form">
                 <div class="flex flex-col items-center space-y-4 mb-6">
                     <img id="profile-pic-preview" src="${
@@ -2086,32 +2156,81 @@ dashboard: () => {
                 <div class="space-y-4">
                    <!-- New Subheading -->
                     <h4 class="text-sm font-bold text-gray-400 border-b border-gray-600 pb-1">Public Information</h4>
-
+                    
+                    <div><label class="text-sm text-gray-400">Preffered Name</label><input name="preferredName" value="${
+                          user.preferredName
+                        }" class="w-full bg-gray-700 rounded-lg p-3 mt-1"></div>
+                    
                     <div class="grid grid-cols-2 gap-4">
-                        <div><label class="text-sm text-gray-400">First Name</label><input name="firstName" value="${
+                         <div><label class="text-sm text-gray-400">First Name</label><input name="firstName" value="${
                           user.firstName
                         }" class="w-full bg-gray-700 rounded-lg p-3 mt-1"></div>
                         <div><label class="text-sm text-gray-400">Last Name</label><input name="lastName" value="${
                           user.lastName
                         }" class="w-full bg-gray-700 rounded-lg p-3 mt-1"></div>
                     </div>
-                    <div><label class="text-sm text-gray-400">contact</label><input name="contact" value="${
+
+                    <div class="grid grid-cols-3 gap-4">
+                      <div>
+            <label class="text-sm text-gray-400">Pronouns</label>
+            <select name="pronouns" class="w-full bg-gray-700 rounded-lg p-3 mt-1">
+                <option value="" disabled>Select your pronouns...</option>
+                <option value="She/Her">She/Her</option>
+                <option value="He/Him">He/Him</option>
+                <option value="They/Them">They/Them</option>
+                <option value="Other">Other / Prefer to self-describe</option>
+            </select>
+             </div>
+
+        <div>
+            <label class="text-sm text-gray-400">Gender Identity</label>
+            <select name="gender" class="w-full bg-gray-700 rounded-lg p-3 mt-1" >
+                <option value="" disabled>Select your gender identity...</option>
+                <option value="Woman">Woman</option>
+                <option value="Man">Man</option>
+                <option value="Non-binary">Non-binary</option>
+                <option value="Transgender">Transgender</option>
+                <option value="Questioning">Questioning</option>
+                <option value="Other">Other / Prefer to self-describe</option>
+            </select>
+             </div>
+        
+</div>
+ <div>
+            <label class="text-sm text-gray-400">Sexual Orientation</label>
+            <select name="orientation"  class="w-full bg-gray-700 rounded-lg p-3 mt-1">
+                <option value="">Select your orientation...</option>
+                <option value="Lesbian">Lesbian</option>
+                <option value="Gay">Gay</option>
+                <option value="Bisexual">Bisexual</option>
+                <option value="Pansexual">Pansexual</option>
+                <option value="Asexual">Asexual</option>
+                <option value="Queer">Queer</option>
+                <option value="Straight">Straight / Heterosexual</option>
+                <option value="Questioning">Questioning</option>
+                <option value="Other">Other / Prefer to self-describe</option>
+            </select>
+            </div>
+                    <div><label class="text-sm text-gray-400">Contact Number</label><input name="contact" value="${
                       user.contact
                     }" class="w-full bg-gray-700 rounded-lg p-3 mt-1"></div>
-                    <div><label class="text-sm text-gray-400">Skills/Talents</label><input name="skills" value="${
-                      user.skills
-                    }" class="w-full bg-gray-700 rounded-lg p-3 mt-1"></div>
+                    <div><label class="text-sm text-gray-400">Skills/Talents</label><textarea name="skills" value="${
+                      user.skills}" class="w-full bg-gray-700 rounded-lg p-3 mt-1">${
+                      user.skills}</textarea></div>
+
 
                     <!-- New Subheading -->
                   <div><label class="text-sm text-gray-400">Email</label><input name="email" value="${
                     user.email
                   }" class="w-full bg-gray-600 rounded-lg p-3 mt-1" readonly></div>
-                    <div class="bg-gray-900/50 p-4 rounded-lg flex justify-between items-center">
-                        <label for="directory-opt-in" class="font-semibold">Show in Member Directory</label>
-                        <input type="checkbox" id="directory-opt-in" onchange="app.handleDirectoryOptIn(this.checked)" ${
+                    
+                  <div class="bg-gray-900/50 p-4 rounded-lg flex justify-between items-center">
+                    <label for="directory-opt-in" class="font-semibold">Show in Member Directory</label>
+                    <input type="checkbox" id="directory-opt-in" onchange="app.handleDirectoryOptIn(this.checked)" ${
                           user.isPublic ? "checked" : ""
                         } class="h-6 w-6 rounded-md accent-pink-500">
-                    </div>
+                         </div>
+
                     <div>
                         <label class="text-sm text-gray-400 mb-2 block">App Theme</label>
                         <div class="grid grid-cols-4 gap-3">
@@ -2165,11 +2284,7 @@ dashboard: () => {
             <div class="mt-8">
                 <h3 class="text-xl font-bold text-center mb-4">My Achievements</h3>
                 <div class="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                    ${
-                      earnedBadges.length > 0
-                        ? earnedBadges
-                            .map(
-                              (badge) => `
+                    ${earnedBadges.length > 0 ? earnedBadges.map( (badge) => `
                         <div class="badge-item text-center p-2 bg-gray-700 rounded-lg cursor-pointer" data-name="${badge.name.replace(
                           /"/g,
                           "&quot;"
@@ -3058,6 +3173,23 @@ this.toggleAnnouncement = (element) => {
         };
         break;
       case "profile":
+
+      const user = this.state.loggedInUser;
+        const form = document.getElementById("profile-form");
+
+        if (user && form) {
+            // An array of the dropdown names we need to set
+            const fieldsToSet = ['pronouns', 'gender', 'orientation'];
+
+            fieldsToSet.forEach(field => {
+                const selectElement = form.elements[field];
+                if (selectElement) {
+                    // This correctly sets the dropdown to the user's saved value
+                    selectElement.value = user[field] || '';
+                }
+            });
+        }
+
         document
           .getElementById("profile-form")
           .addEventListener("submit", this.handleProfileUpdate.bind(this));
@@ -4463,6 +4595,8 @@ this.toggleAnnouncement = (element) => {
       this.showModal("error", "Login Failed", error.message);
     }
   };
+
+  //HANDLE REGISTER DATA
   this.handleRegister = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -4479,14 +4613,16 @@ this.toggleAnnouncement = (element) => {
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         middleName: newUser.middleName || "",
+        preferredName: newUser.preferredName || "",
         suffix: newUser.suffix || "",
-        skills: newUser.skills,
-        contact: newUser.contact,
+        skills: newUser.skills || "",
+        contact: newUser.contact || "",
         social: newUser.social || "",
+        pronouns: newUser.pronouns || "",
+        gender: newUser.gender || "",
+        orientation: newUser.orientation || "",
         points: 50,
-        profilePic: `https://placehold.co/400x400/F59E0B/FFFFFF?text=${newUser.firstName.charAt(
-          0
-        )}`,
+        profilePic: `https://placehold.co/400x400/F59E0B/FFFFFF?text=${newUser.firstName.charAt(0)}`,
         memberSince: new Date().toLocaleDateString(),
         isPublic: false,
         isValidated: false,
@@ -4502,11 +4638,12 @@ this.toggleAnnouncement = (element) => {
         "USER_REGISTER",
         `New user registered: ${newUser.email}`
       );
-      await this.addPointLog(user.uid, "Account Created", 100, null, 0, 100);
+      await this.addPointLog(user.uid, "Account Created", 50, null, 0, 50);
     } catch (error) {
       this.showModal("error", "Registration Failed", error.message);
     }
   };
+
   this.handleLogout = async () => {
     // Set user to offline before signing out
     await this.logAction("USER_LOGOUT", `User logged out.`);
@@ -4623,9 +4760,14 @@ this.toggleAnnouncement = (element) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const updatedData = {
+      preferredName: formData.get("preferredName"),
       firstName: formData.get("firstName"),
       lastName: formData.get("lastName"),
       skills: formData.get("skills"),
+      contact: formData.get("contact"),
+      pronouns: formData.get("pronouns"),
+      gender: formData.get("gender"),
+      orientation: formData.get("orientation"),
     };
     try {
       await updateDoc(
@@ -6069,9 +6211,27 @@ this.handleSubmitAnnouncement = async (e) => {
     }
     this.elements.modal.classList.remove("hidden");
   };
+
+  this.handleTermsChange = (isChecked) => {
+    // Find the button by its new ID
+    const registerButton = document.getElementById('register-button');
+    
+    // Make sure the button exists before trying to change it
+    if (registerButton) {
+        if (isChecked) {
+            // If the box is checked, enable the button
+            registerButton.disabled = false;
+            registerButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            // If the box is unchecked, disable the button
+            registerButton.disabled = true;
+            registerButton.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+};
 };
 
-
+//APP MAIN MAIN
 const app = new App();
 window.app = app; // Make app globally accessible for inline event handlers
 
