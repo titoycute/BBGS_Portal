@@ -1,5 +1,4 @@
 // Import Firebase modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -13,6 +12,14 @@ import {
   signInAnonymously,
   signInWithCustomToken,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { 
+  getStorage, 
+  ref as storageRef, // Use 'as' to avoid conflict with RTDB 'ref'
+  uploadBytes, 
+  getDownloadURL 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import {
   getDatabase,
   ref,
@@ -1460,25 +1467,38 @@ announcements: () => {
                     <button @click="tab = 'register'" :class="{ 'pride-gradient-bg text-white': tab === 'register', 'bg-gray-700 text-gray-300': tab !== 'register' }" class="flex-1 py-2 rounded-lg font-semibold transition-all">Register</button></div>
                       
                     <!-- LOGIN FORM -->
-                    <div x-show="tab === 'login'">
-                        <form id="login-form" class="space-y-4 p-4">
-                            <input name="email" type="email" placeholder="Email Address" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
-                            <input name="password" type="password" placeholder="Password" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
-                            <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95">Log In</button>
-                          
+                  <!-- LOGIN FORM -->
+<div x-show="tab === 'login'">
+    <form id="login-form" class="space-y-4 p-4">
+        <input name="email" type="email" placeholder="Email Address" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
+        <input name="password" type="password" placeholder="Password" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
+        <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95">Log In</button>
+        
+        <a href="http://tinyurl.com/PridePassApp" target="_blank" class="flex items-center justify-center w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-green-700">
+            <i data-lucide="smartphone" class="w-5 h-5 mr-2"></i>
+            <span>Download Android App</span>
+        </a>
 
-                             <a href="http://tinyurl.com/PridePassApp" target="_blank" class="flex items-center justify-center w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-green-700">
-                            <i data-lucide="smartphone" class="w-5 h-5 mr-2"></i>
-                            <span>Download Android App</span>
-                              </a>
+        <!-- START: Added App Notice Section -->
+        <div x-data="{ showNotice: false }" class="pt-2 text-center">
+            <p class="text-xs text-gray-500 italic">
+                App not on Google Play? 
+                <button type="button" @click="showNotice = !showNotice" class="text-blue-400 underline hover:text-blue-300">Find out why</button>
+            </p>
+            <div x-show="showNotice" style="display: none;" class="mt-3 text-left p-3 bg-gray-800 rounded-lg border border-gray-700">
+                <p class="text-xs text-gray-300 leading-relaxed">
+                    We regret to inform you that we have not been able to upload the app on Google Play due to budget constraints for the registration process. However, we kindly ask for your understanding and support by downloading the app temporarily from this link and manually installing it on your device. We also seek help for sponsorship or donations to further enhance the app and make it more widely available. Your cooperation, patience, and potential assistance in securing sponsors or donors are greatly appreciated as we strive to improve the app and reach more users in the future.
+                </p>
+            </div>
+        </div>
+        <!-- END: Added App Notice Section -->
 
-
-                                <!-- CANVA VIDEO -->
-                                <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%; padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden; border-radius: 8px; will-change: transform;">
-                                  <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;" src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1"></iframe>
-                                </div>                            
-                          </form>
-                    </div>
+        <!-- CANVA VIDEO -->
+        <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%; padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden; border-radius: 8px; will-change: transform;">
+            <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;" src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1"></iframe>
+        </div>                                  
+    </form>
+</div>
                     
                    <!-- REGISTER FORM -->
 <div x-show="tab === 'register'" style="display: none;">
@@ -2752,7 +2772,8 @@ this.toggleAnnouncement = (element) => {
       this.fb.auth = getAuth(this.fb.app);
       this.fb.db = getFirestore(this.fb.app);
       this.fb.rtdb = getDatabase(this.fb.app);
-       this.manageWakeLock();
+      this.fb.storage = getStorage(this.fb.app);
+      this.manageWakeLock();
        
     } catch (error) {
       console.error("Firebase initialization failed:", error);
@@ -4724,38 +4745,92 @@ this.toggleAnnouncement = (element) => {
       this.showModal("error", "Google Sign-In Failed", error.message);
     }
   };
-  this.handleProfilePicChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+
+
+this.resizeAndCompressImage = (file, maxWidth, maxHeight, quality) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      const newPicDataUrl = event.target.result;
-      const previewPic = document.getElementById("profile-pic-preview");
-      if (previewPic) previewPic.src = newPicDataUrl;
-      const headerPic = document.getElementById("header-profile-pic");
-      if (headerPic) headerPic.src = newPicDataUrl;
-      try {
-        await updateDoc(
-          doc(this.fb.db, this.paths.userDoc(this.state.firebaseUser.uid)),
-          {
-            profilePic: newPicDataUrl,
-          }
-        );
-        this.showModal(
-          "success",
-          "Photo Updated",
-          "Your new profile picture has been saved."
-        );
-      } catch (error) {
-        this.showModal(
-          "error",
-          "Update Failed",
-          "Could not save the new photo."
-        );
-      }
-    };
     reader.readAsDataURL(file);
-  };
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate the new dimensions to maintain aspect ratio
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Get the compressed image Data URL
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+};
+
+
+
+this.handleProfilePicChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Show a loading/processing modal to the user
+  this.showModal("info", "Processing...", "Your photo is being prepared. Please wait.");
+
+  try {
+    // --- THIS IS THE NEW PART ---
+    // Resize the image to a max of 1024x1024 with 70% quality
+    const compressedPicDataUrl = await this.resizeAndCompressImage(file, 1024, 1024, 0.7);
+    // --- END OF NEW PART ---
+
+    // Update the UI previews
+    const previewPic = document.getElementById("profile-pic-preview");
+    if (previewPic) previewPic.src = compressedPicDataUrl;
+    const headerPic = document.getElementById("header-profile-pic");
+    if (headerPic) headerPic.src = compressedPicDataUrl;
+
+    // Save the compressed image data to Firestore
+    await updateDoc(
+      doc(this.fb.db, this.paths.userDoc(this.state.firebaseUser.uid)), {
+        profilePic: compressedPicDataUrl, // Save the compressed version
+      }
+    );
+
+    this.showModal(
+      "success",
+      "Photo Updated",
+      "Your new profile picture has been saved."
+    );
+  } catch (error) {
+    console.error("Photo Processing Error:", error);
+    this.showModal(
+      "error",
+      "Update Failed",
+      "Could not process or save the new photo."
+    );
+  }
+};
+
+
   this.handleProfileUpdate = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
