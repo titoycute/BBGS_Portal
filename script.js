@@ -210,7 +210,8 @@ this.scrollCarousel = (direction) => {
       month: (currentDate.getMonth() + 1).toString(),
       day: currentDate.getDate().toString(), // Set the default day to the current day
     },
-
+    directorySearch: "",
+    directoryDisplayCount: 10,
     adminEmail: "titoycustodio@bipsu.edu.ph",
     adminActiveTab: "verification",
     adminMemberSearch: "",
@@ -230,8 +231,13 @@ this.scrollCarousel = (direction) => {
     carouselItems: [],
     wakeLockSentinel: null,
   };
-
-
+ this.deferredInstallPrompt = null;
+this.handleShowMoreDirectory = () => {
+  // Increase the number of users to display by 20
+  this.state.directoryDisplayCount += 20;
+  // Re-render the page to show the new users
+  this.render();
+};
 
 //PROFILE CARD
 this.renderDashboardProfile = (user) => {
@@ -466,61 +472,65 @@ this.renderDashboardAnnouncement = () => {
 
   // Replace your existing claimDailyReward function with this one
 
-  this.claimDailyReward = async () => {
-    if (!this.state.loginReward.canClaim) {
-      this.showModal(
-        "error",
-        "Already Claimed",
-        "You have already claimed your reward for today."
-      );
-      return;
-    }
+ this.claimDailyReward = async () => {
+  if (!this.state.loginReward.canClaim) {
+    this.showModal(
+      "error",
+      "Already Claimed",
+      "You have already claimed your reward for today."
+    );
+    return;
+  }
 
-    this.showLoading("Claiming Reward...");
-    const uid = this.fb.auth.currentUser.uid;
-    const userRef = doc(this.fb.db, this.paths.users, uid);
+  this.showLoading("Claiming Reward...");
+  const uid = this.fb.auth.currentUser.uid;
+  const userRef = doc(this.fb.db, this.paths.users, uid);
 
-    try {
-      const newStreak = (this.state.loginReward.currentStreak % 5) + 1;
-      const pointsToAdd = DAILY_REWARD_POINTS[newStreak - 1];
+  try {
+    const newStreak = (this.state.loginReward.currentStreak % 5) + 1;
+    const pointsToAdd = DAILY_REWARD_POINTS[newStreak - 1];
 
-      // 1. Update the document in Firestore. This part was already working.
-      await updateDoc(userRef, {
-        points: increment(pointsToAdd),
-        consecutiveLogins: newStreak,
-        lastLoginDate: Timestamp.now(),
-      });
+    // 1. Update the document in Firestore.
+    await updateDoc(userRef, {
+      points: increment(pointsToAdd),
+      consecutiveLogins: newStreak,
+      lastLoginDate: Timestamp.now(),
+    });
 
-      // 2. (THE FIX) Fetch the updated user data directly from Firestore.
-      // This ensures our local data is perfectly in sync.
-      const updatedUserDoc = await getDoc(userRef);
-      this.state.loggedInUser = {
-        id: updatedUserDoc.id,
-        ...updatedUserDoc.data(),
-      };
+    // 2. Fetch the updated user data directly from Firestore.
+    const updatedUserDoc = await getDoc(userRef);
+    this.state.loggedInUser = {
+      id: updatedUserDoc.id,
+      ...updatedUserDoc.data(),
+    };
 
-      // 3. Hide the loading spinner and show the success message.
-      this.hideLoading();
-      this.showModal(
-        "success",
-        "Reward Claimed!",
-        `You have earned ${pointsToAdd} points! Your streak is now ${newStreak} days.`
-      );
+    // --- START: THIS IS THE NEW LINE YOU REQUESTED ---
+    // 3. Log this action to the admin system log.
+    const user = this.state.loggedInUser;
+    await this.logAction("DAILY_REWARD_CLAIM", `${user.firstName} ${user.lastName} claimed ${pointsToAdd} points for their Day ${newStreak} streak.`);
+    // --- END: NEW LINE ---
 
-      // 4. Re-render the dashboard with the fresh, correct data.
-      this.render("dashboard");
-      lucide.createIcons();
-    } catch (error) {
-      // This error block will now only run if the database update truly fails.
-      console.error("Error claiming reward: ", error);
-      this.hideLoading();
-      this.showModal(
-        "error",
-        "Error",
-        "Could not claim your reward. Please try again."
-      );
-    }
-  };
+    // 4. Hide the loading spinner and show the success message.
+    this.hideLoading();
+    this.showModal(
+      "success",
+      "Reward Claimed!",
+      `You have earned ${pointsToAdd} points! Your streak is now ${newStreak} days.`
+    );
+
+    // 5. Re-render the dashboard with the fresh, correct data.
+    this.render("dashboard");
+    lucide.createIcons();
+  } catch (error) {
+    console.error("Error claiming reward: ", error);
+    this.hideLoading();
+    this.showModal(
+      "error",
+      "Error",
+      "Could not claim your reward. Please try again."
+    );
+  }
+};
 
   // Add this new function to handle the timer logic
 this.startDailyRewardTimer = () => {
@@ -1474,10 +1484,25 @@ announcements: () => {
         <input name="password" type="password" placeholder="Password" required class="w-full bg-gray-700 border-2 border-transparent focus:border-pink-500 rounded-lg p-3 outline-none transition-all">
         <button type="submit" class="w-full pride-gradient-bg text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95">Log In</button>
         
-        <a href="http://tinyurl.com/PridePassApp" target="_blank" class="flex items-center justify-center w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-green-700">
-            <i data-lucide="smartphone" class="w-5 h-5 mr-2"></i>
-            <span>Download Android App</span>
-        </a>
+     
+
+        <button 
+        type="button" 
+        id="install-app-button" 
+        onclick="app.handleInstallClick()" 
+        class="flex items-center justify-center w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-indigo-700 text-center text-sm"
+        style="display: none;">
+        <i data-lucide="arrow-down-to-line" class="w-4 h-4 mr-2"></i>
+        <span>Save App to Your Homescreen</span>
+    </button>
+
+            <!--
+              
+                <a href="http://tinyurl.com/PridePassApp" target="_blank" class="flex items-center justify-center w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-green-700 text-center text-sm">
+                    <i data-lucide="smartphone" class="w-4 h-4 mr-2"></i>
+                    <span>Download App</span>
+                </a>
+            -->
 
         <!-- START: Added App Notice Section -->
         <div x-data="{ showNotice: false }" class="pt-2 text-center">
@@ -1485,10 +1510,18 @@ announcements: () => {
                 App not on Google Play? 
                 <button type="button" @click="showNotice = !showNotice" class="text-blue-400 underline hover:text-blue-300">Find out why</button>
             </p>
+            
             <div x-show="showNotice" style="display: none;" class="mt-3 text-left p-3 bg-gray-800 rounded-lg border border-gray-700">
-                <p class="text-xs text-gray-300 leading-relaxed">
-                    We regret to inform you that we have not been able to upload the app on Google Play due to budget constraints for the registration process. However, we kindly ask for your understanding and support by downloading the app temporarily from this link and manually installing it on your device. We also seek help for sponsorship or donations to further enhance the app and make it more widely available. Your cooperation, patience, and potential assistance in securing sponsors or donors are greatly appreciated as we strive to improve the app and reach more users in the future.
-                </p>
+                <p class="text-xs text-gray-300 leading-relaxed" style="text-align: justify; text-indent: 20px;">
+    We regret to inform you that due to budget constraints, the app is not available on Google Play. You can easily access the app by adding it as a browser extension or saving it to your device's home screen. We are also open to sponsorship or donations to enhance the app's features and accessibility. Your cooperation and support in this endeavor are greatly appreciated as we strive to improve the app and expand its reach to more users in the future.
+    You may also download this app using the 3rd party&nbsp;
+    
+    <!-- START: This is the corrected link -->
+    <a href="http://tinyurl.com/PridePassApp" target="_blank" class="inline-flex items-center align-middle text-pink-400 font-semibold hover:underline">
+        <i data-lucide="smartphone" class="w-4 h-4 mr-1"></i>Download App Manually
+    </a>
+    <!-- END: Corrected link -->
+</p>
             </div>
         </div>
         <!-- END: Added App Notice Section -->
@@ -1937,55 +1970,76 @@ dashboard: () => {
 
 
     //DASH MEMBER DIRECTORY 
-    directory: () => {
-      const filteredUsers = this.state.users.filter(
+   // In your this.views object, replace the directory function
+
+directory: () => {
+    const filteredUsers = this.state.users.filter(
         (u) =>
-          u.isPublic &&
-          u.isValidated &&
-          u.email !== this.state.adminEmail &&
-          ((u.firstName + " " + u.lastName)
+        u.isPublic &&
+        u.isValidated &&
+        u.email !== this.state.adminEmail &&
+        ((u.firstName + " " + u.lastName)
             .toLowerCase()
             .includes(this.state.directorySearch) ||
             (u.skills || "").toLowerCase().includes(this.state.directorySearch))
-      );
-      return `
+    );
+
+    // --- START: New logic to show only a portion of the users ---
+    // We slice the array to get only the number of users we want to display
+    const usersToShow = filteredUsers.slice(0, this.state.directoryDisplayCount);
+    // --- END: New logic ---
+
+    return `
     <h2 class="text-2xl font-bold text-center mb-4">Member Directory</h2>
     <div class="flex space-x-2 mb-4">
         <input id="directory-search-input" type="search" placeholder="Search by name or skill..." class="w-full bg-gray-700 rounded-lg p-3">
         <button onclick="app.handleDirectorySearch()" class="pride-gradient-bg px-4 rounded-lg"><i data-lucide="search"></i></button>
     </div>
-    <div class="space-y-2">${filteredUsers.map((user) => {const earnedBadges = (user.earnedBadgeIds || [])
-       .map((badgeId) => this.state.badges.find((b) => b.id === badgeId)).filter(Boolean).slice(0, 5);
-          const isCurrentUser = user.id === this.state.loggedInUser.id;
-          return `
-            <div class="bg-gray-700 p-3 rounded-lg flex items-center space-x-4 cursor-pointer hover:bg-gray-600" onclick="app.openMemberDetailsModal('${user.id}')">
-              <div class="relative">
-                <img src="${user.profilePic}" class="w-12 h-12 rounded-full object-cover">
-                <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${this.isUserOnline(user.lastSeen) ? "bg-green-400" : "bg-gray-500"}"></div>
-              </div>
-            <div class="flex-1">
-              <p class="font-bold">${user.firstName} ${user.lastName}</p>
-              <p class="text-sm text-gray-400"> ${user.skills && user.skills.length > 15 ? user.skills.substring(0, 15) + '...' : user.skills || "No skills listed"}</p>
-            </div>
-  
-            <div class="flex space-x-1">${earnedBadges.map((badge) => this.renderBadgeIcon( badge.icon,"w-5 h-5 text-amber-400")).join("")}</div>
-              
-            <!-- NEW CHAT BUTTON -->
-                ${!isCurrentUser ? `
-                <button onclick="event.stopPropagation(); app.startChatWithUser('${user.id}')" class="bg-blue-500/20 text-blue-400 p-2 rounded-md hover:bg-blue-500/40">
-                    <i data-lucide="message-square"></i>
-                </button>
-                `: ""
-                }
-            </div>
-        `;
-        })
-        .join("") ||
-      '<p class="text-gray-400 text-center">No members match your search.</p>'
-    }
+    <div class="space-y-2">
+        ${
+            // We now map over 'usersToShow' instead of the full 'filteredUsers' array
+            usersToShow.map((user) => {
+                const earnedBadges = (user.earnedBadgeIds || [])
+                    .map((badgeId) => this.state.badges.find((b) => b.id === badgeId)).filter(Boolean).slice(0, 5);
+                const isCurrentUser = user.id === this.state.loggedInUser.id;
+                return `
+                    <div class="bg-gray-700 p-3 rounded-lg flex items-center space-x-4 cursor-pointer hover:bg-gray-600" onclick="app.openMemberDetailsModal('${user.id}')">
+                        <div class="relative">
+                            <img src="${user.profilePic}" class="w-12 h-12 rounded-full object-cover">
+                            <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${this.isUserOnline(user.lastSeen) ? "bg-green-400" : "bg-gray-500"}"></div>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-bold">${user.firstName} ${user.lastName}</p>
+                            <p class="text-sm text-gray-400"> ${user.skills && user.skills.length > 15 ? user.skills.substring(0, 15) + '...' : user.skills || "No skills listed"}</p>
+                        </div>
+                        <div class="flex space-x-1">${earnedBadges.map((badge) => this.renderBadgeIcon(badge.icon,"w-5 h-5 text-amber-400")).join("")}</div>
+                        ${!isCurrentUser ? `
+                            <button onclick="event.stopPropagation(); app.startChatWithUser('${user.id}')" class="bg-blue-500/20 text-blue-400 p-2 rounded-md hover:bg-blue-500/40">
+                                <i data-lucide="message-square"></i>
+                            </button>
+                        ` : ""}
+                    </div>
+                `;
+            }).join("") || '<p class="text-gray-400 text-center">No members match your search.</p>'
+        }
     </div>
+
+    <!-- START: New "Show More" Button Section -->
+    ${
+        // This checks if there are more users to show than are currently visible
+        filteredUsers.length > this.state.directoryDisplayCount
+        ? `
+            <div class="text-center mt-6">
+                <button onclick="app.handleShowMoreDirectory()" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors">
+                    Show More
+                </button>
+            </div>
+        `
+        : "" // If not, render nothing
+    }
+    <!-- END: New "Show More" Button Section -->
     `;
-     },
+},
 
     leaderboard: () => {
       const rankedUsers = this.state.users
@@ -2133,13 +2187,11 @@ dashboard: () => {
 
                 </div>
 
-                <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%;
- padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;
- border-radius: 8px; will-change: transform;">
-  <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
-    src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
-  </iframe>
-</div>
+                <div style="position: relative; width: 100%; height: 0; padding-top: 177.7778%;padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden;border-radius: 8px; will-change: transform;">
+                  <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;"
+                  src="https://www.canva.com/design/DAGy3ERSjCo/4e2CdzmxIShB6KdG7Jui2w/view?embed" allowfullscreen="allowfullscreen" allow="fullscreen">
+                  </iframe>
+                </div>
 
                 <p class="text-center text-xs text-gray-500 pt-4">App Version 2.0.2 (BBGS Pride Pass QR Code System) <br> © 2025 BBGS Dev Tootz </p>
             </div>
@@ -2769,6 +2821,31 @@ this.toggleAnnouncement = (element) => {
 
     try {
       this.fb.app = initializeApp(firebaseConfig);
+      // ... your other Firebase service initializations (auth, db, etc.) ...
+      this.manageWakeLock();
+      
+      // START: 2. Add PWA setup logic inside your init function
+      // Register the service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => console.log('Service Worker registered with scope:', registration.scope))
+          .catch((error) => console.log('Service Worker registration failed:', error));
+      }
+
+      // Listen for the browser's install prompt
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        this.deferredInstallPrompt = e;
+        // Find the install button and make it visible.
+        const installButton = document.getElementById('install-app-button');
+        if (installButton) {
+          installButton.style.display = 'flex'; 
+        }
+      });    } catch (error) {}
+
+    try {
+      this.fb.app = initializeApp(firebaseConfig);
       this.fb.auth = getAuth(this.fb.app);
       this.fb.db = getFirestore(this.fb.app);
       this.fb.rtdb = getDatabase(this.fb.app);
@@ -2803,7 +2880,10 @@ this.toggleAnnouncement = (element) => {
           this.attachListeners(); // Attach all necessary listeners for the logged-in user
           this.updateUserInfo();
           this.navigateTo("dashboard");
-        } else {
+        } 
+        
+        
+        else {
           // User exists in Auth, but not in Firestore database. Log them out.
           this.handleLogout();
         }
@@ -2818,9 +2898,27 @@ this.toggleAnnouncement = (element) => {
       }
       this.elements.loadingOverlay.classList.add("hidden");
     });
+
+    
+  
   };
 
-
+ this.handleInstallClick = async () => {
+    const installButton = document.getElementById('install-app-button');
+    if (this.deferredInstallPrompt) {
+      // Show the browser's installation prompt
+      this.deferredInstallPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      const { outcome } = await this.deferredInstallPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      // We've used the prompt, so we can't use it again, clear it
+      this.deferredInstallPrompt = null;
+      // Hide the install button
+      if (installButton) {
+        installButton.style.display = 'none';
+      }
+    }
+  };
 
   // --- NEW FUNCTION: MANAGE PRESENCE ---
   this.managePresence = () => {
@@ -3075,17 +3173,18 @@ this.toggleAnnouncement = (element) => {
       this.state.leaderboardDisplayCount = 10;
       this.state.leaderboardLoading = false; // Reset the loading flag
     }
-
-
-    if (this.aboutAudio) {
-      this.aboutAudio.pause();
-      this.aboutAudio.currentTime = 0;
-      this.aboutAudio = null;
-    }
+    
     if (page === 'about') {  
       this.aboutAudio = new Audio("NoteGPT_Speech_1757811715642.mp3");
       this.aboutAudio.play();
     }
+
+      if (this.aboutAudio) {
+        this.aboutAudio.pause();
+        this.aboutAudio.currentTime = 0;
+        this.aboutAudio = null;
+      }
+
     this.updateNav();
     this.state.currentPage = page;
     this.render();
@@ -3149,6 +3248,7 @@ this.toggleAnnouncement = (element) => {
         }
         break;
       case "dashboard":
+        
         if (this.state.loggedInUser.isValidated)
           this.generateQRCode(
             "member-qr-code",
@@ -5997,26 +6097,26 @@ this.handleSubmitAnnouncement = async (e) => {
       256
     );
   };
+
+
   this.openMemberDetailsModal = (userId) => {
     const user = this.state.users.find((u) => u.id === userId);
     if (!user) return;
-    const earnedBadges = (user.earnedBadgeIds || [])
-      .map((badgeId) => this.state.badges.find((b) => b.id === badgeId))
-      .filter(Boolean);
-    const content = `<div class="text-center space-y-4"><img src="${
-      user.profilePic
-    }" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-purple-500"><h2 class="text-2xl font-bold">${
-      user.firstName
-    } ${user.lastName}</h2><p class="text-gray-400">${
-      user.skills || "No skills listed"
-    }</p><p class="text-gray-300 font-semibold">${
-      user.contact
-    }</p><div class="mt-4 border-t border-gray-600 pt-4"><h4 class="font-semibold text-center mb-2">Earned Badges</h4><div class="grid grid-cols-3 sm:grid-cols-4 gap-4">${
-      earnedBadges.length > 0
-        ? earnedBadges
-            .map(
-              (badge) =>
-                `<div class="text-center p-2 bg-gray-700 rounded-lg">${this.renderBadgeIcon(
+    const earnedBadges = (user.earnedBadgeIds || []).map((badgeId) => this.state.badges.find((b) => b.id === badgeId)).filter(Boolean);
+    const content = `<div class="text-center space-y-4"><img src="${user.profilePic }" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-purple-500">
+    
+    <h2 class="text-2xl font-bold">${user.firstName} ${user.lastName}</h2>
+    <h4 class="text-l font-bold">Preffered Name: ${user.preferredName || user.firstName} </h4>
+    <p>${user.pronouns || ""}  | ${user.gender ||""}  | ${user.orientation || ""}</p>
+    <p class="text-gray-400">${user.skills || "No skills listed"}</p>
+    <div class="flex items-center justify-center space-x-2"">
+      <i data-lucide="phone" class="w-4 h-4 text-gray-400"></i>
+      <a href="tel:${user.contact}" class="text-sm text-pink-400 hover:text-pink-300">${user.contact}</a>
+    </div>
+
+    <div class="mt-4 border-t border-gray-600 pt-4">
+      <h4 class="font-semibold text-center mb-2">Earned Badges</h4>
+        <div class="grid grid-cols-3 sm:grid-cols-4 gap-4">${earnedBadges.length > 0 ? earnedBadges.map((badge) => `<div class="text-center p-2 bg-gray-700 rounded-lg">${this.renderBadgeIcon(
                   badge.icon,
                   "w-10 h-10 mx-auto text-amber-400"
                 )}<p class="text-xs mt-2 font-semibold">${badge.name}</p></div>`
