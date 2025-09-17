@@ -2824,14 +2824,16 @@ this.toggleAnnouncement = (element) => {
       // ... your other Firebase service initializations (auth, db, etc.) ...
       this.manageWakeLock();
       
-      // START: 2. Add PWA setup logic inside your init function
-      // Register the service worker
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-          .then((registration) => console.log('Service Worker registered with scope:', registration.scope))
-          .catch((error) => console.log('Service Worker registration failed:', error));
-      }
+        navigator.serviceWorker.register('/sw.js');
 
+        // Check for iOS/Safari and show the manual instructions button
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            const iosInstallButton = document.getElementById('ios-install-button');
+            if(iosInstallButton) iosInstallButton.style.display = 'flex';
+        }
+      }
       // Listen for the browser's install prompt
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
@@ -2904,20 +2906,44 @@ this.toggleAnnouncement = (element) => {
   };
 
  this.handleInstallClick = async () => {
-    const installButton = document.getElementById('install-app-button');
     if (this.deferredInstallPrompt) {
-      // Show the browser's installation prompt
       this.deferredInstallPrompt.prompt();
-      // Wait for the user to respond to the prompt
       const { outcome } = await this.deferredInstallPrompt.userChoice;
       console.log(`User response to the install prompt: ${outcome}`);
-      // We've used the prompt, so we can't use it again, clear it
       this.deferredInstallPrompt = null;
-      // Hide the install button
-      if (installButton) {
-        installButton.style.display = 'none';
-      }
+      const installButton = document.getElementById('install-app-button');
+      if (installButton) installButton.style.display = 'none';
     }
+  };
+
+   this.showIosInstallInstructions = () => {
+      const content = `
+        <div class="text-left space-y-4">
+            <p class="font-semibold">To add this app to your Home Screen:</p>
+            <ol class="list-decimal list-inside space-y-3 text-gray-300">
+                <li>Tap the <i data-lucide="share" class="inline-block w-4 h-4 mx-1"></i> <span class="font-semibold">Share</span> button in the Safari toolbar.</li>
+                <li>Scroll down the list of options.</li>
+                <li>Tap on <i data-lucide="plus-square" class="inline-block w-4 h-4 mx-1"></i> <span class="font-semibold">"Add to Home Screen"</span>.</li>
+            </ol>
+            <img src="https://support.apple.com/library/content/dam/edam/applecare/images/en_US/safari/ios15-iphone13-pro-safari-share-sheet-add-to-home-screen.png" alt="iOS Add to Home Screen instructions" class="rounded-lg mt-4">
+        </div>
+      `;
+      this.openFullscreenModal('Install on iOS', content);
+  };
+
+    this.showIosInstallInstructions = () => {
+      const content = `
+        <div class="text-left space-y-4">
+            <p class="font-semibold">To add this app to your Home Screen:</p>
+            <ol class="list-decimal list-inside space-y-3 text-gray-300">
+                <li>Tap the <i data-lucide="share" class="inline-block w-4 h-4 mx-1"></i> <span class="font-semibold">Share</span> button in the Safari toolbar.</li>
+                <li>Scroll down the list of options.</li>
+                <li>Tap on <i data-lucide="plus-square" class="inline-block w-4 h-4 mx-1"></i> <span class="font-semibold">"Add to Home Screen"</span>.</li>
+            </ol>
+            <img src="https://support.apple.com/library/content/dam/edam/applecare/images/en_US/safari/ios15-iphone13-pro-safari-share-sheet-add-to-home-screen.png" alt="iOS Add to Home Screen instructions" class="rounded-lg mt-4">
+        </div>
+      `;
+      this.openFullscreenModal('Install on iOS', content);
   };
 
   // --- NEW FUNCTION: MANAGE PRESENCE ---
