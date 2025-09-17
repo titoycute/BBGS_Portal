@@ -1507,22 +1507,31 @@ announcements: () => {
         <!-- START: Added App Notice Section -->
         <div x-data="{ showNotice: false }" class="pt-2 text-center">
             <p class="text-xs text-gray-500 italic">
-                App not on Google Play? 
+                App not on Google Play / App Store? 
                 <button type="button" @click="showNotice = !showNotice" class="text-blue-400 underline hover:text-blue-300">Find out why</button>
             </p>
             
             <div x-show="showNotice" style="display: none;" class="mt-3 text-left p-3 bg-gray-800 rounded-lg border border-gray-700">
-                <p class="text-xs text-gray-300 leading-relaxed" style="text-align: justify; text-indent: 20px;">
-    We regret to inform you that due to budget constraints, the app is not available on Google Play. You can easily access the app by adding it as a browser extension or saving it to your device's home screen. We are also open to sponsorship or donations to enhance the app's features and accessibility. Your cooperation and support in this endeavor are greatly appreciated as we strive to improve the app and expand its reach to more users in the future.
-    You may also download this app using the 3rd party&nbsp;
-    
-    <!-- START: This is the corrected link -->
-    <a href="http://tinyurl.com/PridePassApp" target="_blank" class="inline-flex items-center align-middle text-pink-400 font-semibold hover:underline">
-        <i data-lucide="smartphone" class="w-4 h-4 mr-1"></i>Download App Manually
-    </a>
-    <!-- END: Corrected link -->
-</p>
+
+                <!-- First Paragraph -->
+                <p class="text-xs text-gray-300 leading-relaxed text-justify indent-5">
+                    We are currently working to bring our app to the Google Play Store and Apple App Store. This process requires a developer registration fee, and as a project with budget constraints, we are not there yet.
+                </p>
+
+                <!-- Second Paragraph (with spacing above it) -->
+                <p class="text-xs text-gray-300 leading-relaxed text-justify indent-5 mt-2">
+                    In the meantime, you can get the full app experience by downloading it directly from our site or by using the "Add to Home Screen" feature in your browser. We are actively looking for sponsors and donations to help us complete this final step. Your support is greatly appreciated as we work to make the app more accessible for everyone.
+                </p>
+
+                <!-- Third Paragraph (with the link) -->
+                <p class="text-xs text-gray-300 leading-relaxed text-justify indent-5 mt-2">
+                    You may also download this app externally on your Android devices&nbsp;
+                    <a href="http://tinyurl.com/PridePassApp" target="_blank" class="inline-flex items-center align-middle text-green-400 font-semibold hover:underline">
+                        <i data-lucide="smartphone" class="w-4 h-4 mr-1"></i>Download App Manually
+                    </a>.
+                </p>
             </div>
+
         </div>
         <!-- END: Added App Notice Section -->
 
