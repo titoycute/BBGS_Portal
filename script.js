@@ -3173,17 +3173,17 @@ this.toggleAnnouncement = (element) => {
       this.state.leaderboardDisplayCount = 10;
       this.state.leaderboardLoading = false; // Reset the loading flag
     }
-    
+    if (this.aboutAudio) {
+        this.aboutAudio.pause();
+        this.aboutAudio.currentTime = 0;
+        this.aboutAudio = null;
+      }
     if (page === 'about') {  
       this.aboutAudio = new Audio("NoteGPT_Speech_1757811715642.mp3");
       this.aboutAudio.play();
     }
 
-      if (this.aboutAudio) {
-        this.aboutAudio.pause();
-        this.aboutAudio.currentTime = 0;
-        this.aboutAudio = null;
-      }
+      
 
     this.updateNav();
     this.state.currentPage = page;
