@@ -1496,6 +1496,17 @@ announcements: () => {
         <span>Save App to Your Homescreen</span>
     </button>
 
+    <button 
+                    type="button" 
+                    id="ios-install-button" 
+                    onclick="app.showIosInstallInstructions()" 
+                    class="flex items-center justify-center w-full bg-sky-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-sky-700 text-center text-sm"
+                    style="display: none;"
+                  >
+                    <i data-lucide="arrow-down-to-line" class="w-4 h-4 mr-2"></i>
+                    <span>Save App to your Homescreen</span>
+                  </button>
+
             <!--
               
                 <a href="http://tinyurl.com/PridePassApp" target="_blank" class="flex items-center justify-center w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-green-700 text-center text-sm">
