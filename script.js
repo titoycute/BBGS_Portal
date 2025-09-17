@@ -231,7 +231,9 @@ this.scrollCarousel = (direction) => {
     carouselItems: [],
     wakeLockSentinel: null,
   };
- this.deferredInstallPrompt = null;
+
+
+
 this.handleShowMoreDirectory = () => {
   // Increase the number of users to display by 20
   this.state.directoryDisplayCount += 20;
@@ -1152,6 +1154,8 @@ this.stopDailyRewardTimer = () => {
 
   // --- Firestore collection paths ---
   const appId = typeof __app_id !== "undefined" ? __app_id : "bbgs-pride-pass"; // Fallback for local dev
+ this.deferredInstallPrompt = null;
+
   this.paths = {
     users: `artifacts/${appId}/users`,
     userDoc: (uid) => `artifacts/${appId}/users/${uid}`,
@@ -1486,24 +1490,28 @@ announcements: () => {
         
      
 
-        <button 
-        type="button" 
-        id="install-app-button" 
-        onclick="app.handleInstallClick()" 
-        class="flex items-center justify-center w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-indigo-700 text-center text-sm"
-        style="display: none;">
-        <i data-lucide="arrow-down-to-line" class="w-4 h-4 mr-2"></i>
-        <span>Save App to Your Homescreen</span>
-    </button>
+        <!-- This button is for Chrome/Android -->
+                  <button 
+                    type="button" 
+                    id="install-app-button" 
+                    onclick="app.handleInstallClick()" 
+                    class="flex items-center justify-center w-full bg-green-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-indigo-700 text-center text-sm"
+                    style="display: none;"
+                  >
+                    <i data-lucide="arrow-down-to-line" class="w-4 h-4 mr-2"></i>
+                    <span>Save App on your Home Screen</span>
+                  </button>
 
-    <button type="button" 
+                  <!-- This button is ONLY for iOS/Safari -->
+                  <button 
+                    type="button" 
                     id="ios-install-button" 
                     onclick="app.showIosInstallInstructions()" 
                     class="flex items-center justify-center w-full bg-sky-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-sky-700 text-center text-sm"
                     style="display: none;"
                   >
-                    <i data-lucide="arrow-down-to-line" class="w-4 h-4 mr-2"></i>
-                    <span>Save App to your Homescreen</span>
+                    <i data-lucide="arrow-down-to-,line" class="w-4 h-4 mr-2"></i>
+                    <span>Save App on Home Screen</span>
                   </button>
 
             <!--
@@ -1537,7 +1545,7 @@ announcements: () => {
                 <p class="text-xs text-gray-300 leading-relaxed text-justify indent-5 mt-2">
                     You may also download this app externally on your Android devices&nbsp;
                     <a href="http://tinyurl.com/PridePassApp" target="_blank" class="inline-flex items-center align-middle text-green-400 font-semibold hover:underline">
-                        <i data-lucide="smartphone" class="w-4 h-4 mr-1"></i>Download App Manually
+                        <i data-lucide="smartphone" class="w-4 h-4 mr-1"></i>Download App Manually in Andriod Device
                     </a>.
                 </p>
             </div>
@@ -2843,27 +2851,35 @@ this.toggleAnnouncement = (element) => {
       // ... your other Firebase service initializations (auth, db, etc.) ...
       this.manageWakeLock();
       
-      if ('serviceWorker' in navigator) {
+       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
 
         // Check for iOS/Safari and show the manual instructions button
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        if (isIOS) {
-            const iosInstallButton = document.getElementById('ios-install-button');
-            if(iosInstallButton) iosInstallButton.style.display = 'flex';
+        // Also check if the app is NOT already running in standalone (installed) mode
+        const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+        
+        if (isIOS && !isInStandaloneMode) {
+            // Use a timeout to ensure the DOM has rendered the button
+            setTimeout(() => {
+                const iosInstallButton = document.getElementById('ios-install-button');
+                if(iosInstallButton) iosInstallButton.style.display = 'flex';
+            }, 500);
         }
       }
-      // Listen for the browser's install prompt
+
+      // Listen for the standard PWA install prompt (for Chrome/Android)
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
-        // Stash the event so it can be triggered later.
         this.deferredInstallPrompt = e;
-        // Find the install button and make it visible.
         const installButton = document.getElementById('install-app-button');
         if (installButton) {
-          installButton.style.display = 'flex'; 
+          installButton.style.display = 'flex'; // Make the button visible
         }
-      });    } catch (error) {}
+      });
+
+
+    } catch (error) {}
 
     try {
       this.fb.app = initializeApp(firebaseConfig);
@@ -2880,6 +2896,8 @@ this.toggleAnnouncement = (element) => {
       this.elements.loadingText.classList.add("text-red-400");
       return;
     }
+
+
 
     await this.handleRedirectResult();
 
@@ -2935,19 +2953,18 @@ this.toggleAnnouncement = (element) => {
     }
   };
 
-   this.showIosInstallInstructions = () => {
+  this.showIosInstallInstructions = () => {
       const content = `
         <div class="text-left space-y-4">
-            <p class="font-semibold">To add this app to your Home Screen:</p>
-            <ol class="list-decimal list-inside space-y-3 text-gray-300">
-                <li>Tap the <i data-lucide="share" class="inline-block w-4 h-4 mx-1"></i> <span class="font-semibold">Share</span> button in the Safari toolbar.</li>
-                <li>Scroll down the list of options.</li>
-                <li>Tap on <i data-lucide="plus-square" class="inline-block w-4 h-4 mx-1"></i> <span class="font-semibold">"Add to Home Screen"</span>.</li>
+            <p class="font-semibold text-lg">To Add to Home Screen:</p>
+            <ol class="list-decimal list-inside space-y-4 text-gray-300">
+                <li>Tap the <i data-lucide="share" class="inline-block w-5 h-5 mx-1"></i> <span class="font-semibold">Share</span> button in Safari.</li>
+                <li>Scroll down and tap <i data-lucide="plus-square" class="inline-block w-5 h-5 mx-1"></i> <span class="font-semibold">"Add to Home Screen"</span>.</li>
             </ol>
-            <img src="https://support.apple.com/library/content/dam/edam/applecare/images/en_US/safari/ios15-iphone13-pro-safari-share-sheet-add-to-home-screen.png" alt="iOS Add to Home Screen instructions" class="rounded-lg mt-4">
+            <img src="https://support.apple.com/library/content/dam/edam/applecare/images/en_US/safari/ios15-iphone13-pro-safari-share-sheet-add-to-home-screen.png" alt="Visual instructions for adding an app to the home screen on iOS" class="rounded-lg mt-4 border border-gray-600">
         </div>
       `;
-      this.openFullscreenModal('Install on iOS', content);
+      this.openFullscreenModal('Install App on iOS', content);
   };
 
    
