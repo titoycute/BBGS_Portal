@@ -1499,7 +1499,7 @@ announcements: () => {
                     style="display: none;"
                   >
                     <i data-lucide="arrow-down-to-line" class="w-4 h-4 mr-2"></i>
-                    <span>Save App on Home Screen</span>
+                    <span>Save App on your Home Screen</span>
                   </button>
 
                   <!-- This button is ONLY for iOS/Safari -->
@@ -1556,7 +1556,14 @@ announcements: () => {
         <!-- CANVA VIDEO -->
         <div style="position: relative; width: 100%; height: 0; padding-top: 100.0000%; padding-bottom: 0; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden; border-radius: 8px; will-change: transform;">
             <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0;margin: 0;" src="https://www.canva.com/design/DAGyyOxfOro/C22eWaeHJAsyy3SSkP89vA/watch?embed&autoplay=1"></iframe>
-        </div>                                  
+        </div>
+        
+       <div class="text-center my-8">
+    <a href="https://www.facebook.com/bbgsofficial" target="_blank" class="inline-flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 py-1.5 rounded-md font-semibold hover:bg-blue-700 transition-colors shadow-md text-xs">
+        <i data-lucide="facebook" class="w-4 h-4"></i>
+        <span>Follow Us</span>
+    </a>
+</div>
     </form>
 </div>
                     
@@ -1627,7 +1634,7 @@ announcements: () => {
                 class="h-4 w-4 mt-1 accent-pink-600 border-gray-500 rounded focus:ring-pink-500"
             >
             <label for="terms" class="ml-2 text-sm text-gray-400">
-                I agree to the <a href="#" class="text-pink-400 hover:underline">Terms and Conditions</a>.
+                I agree to the <a href="#" onclick="event.preventDefault(); app.showTermsModal()" class="text-pink-400 hover:underline">Terms and Conditions</a>.
             </label>
         </div>
         <!-- END: Added Terms & Conditions Checkbox -->
@@ -2828,6 +2835,85 @@ this.fetchAnnouncements = async () => {
  */
 this.toggleAnnouncement = (element) => {
     element.classList.toggle('expanded');
+};
+
+this.showTermsModal = () => {
+    const content = `
+      <div class="text-left text-gray-300 space-y-4 text-sm max-h-[70vh] overflow-y-auto pr-2">
+          <p class="font-bold">Last Updated: September 17, 2025</p>
+          
+          <p>Welcome to Pride Pass! These terms and conditions outline the rules and regulations for the use of the Pride Pass application, a project developed by the BBGS President.</p>
+          <p>By accessing and using this app, you accept these terms and conditions in full. Do not continue to use Pride Pass if you do not accept all of the terms and conditions stated on this page.</p>
+          
+          <div>
+              <h4 class="font-bold text-white mb-2">1. Accounts and Registration</h4>
+              <ul class="list-disc list-inside space-y-2">
+                <li>To use most features of Pride Pass, you must register for an account. You must provide accurate and complete information and keep your account information updated.</li>
+                <li>You are responsible for maintaining the confidentiality of your account and password and for restricting access to your device. You agree to accept responsibility for all activities that occur under your account.</li>
+                <li>You must be at least 13 years of age to use this app.</li>
+              </ul>
+          </div>
+          
+          <div>
+              <h4 class="font-bold text-white mb-2">2. User Conduct</h4>
+              <ul class="list-disc list-inside space-y-2">
+                <li>You agree to use Pride Pass only for lawful purposes and in a way that does not infringe the rights of, restrict, or inhibit anyone else's use and enjoyment of the app.</li>
+                <li>Prohibited behavior includes harassing or causing distress or inconvenience to any other user, transmitting obscene or offensive content, or disrupting the normal flow of dialogue within the app.</li>
+                <li>Hate speech, discriminatory remarks, and any form of bullying are strictly prohibited and will result in immediate account termination.</li>
+              </ul>
+          </div>
+
+          <div>
+              <h4 class="font-bold text-white mb-2">3. User-Generated Content</h4>
+              <ul class="list-disc list-inside space-y-2">
+                  <li>You are solely responsible for your profile information, photos, chat messages, and any other content you submit to the app ("User Content").</li>
+                  <li>By submitting User Content, you grant us a non-exclusive, royalty-free license to use, reproduce, and display such content in connection with the app's services.</li>
+                  <li>You agree not to post any content that is illegal, defamatory, or infringes on any third-party rights. We reserve the right to remove any content that violates these terms.</li>
+              </ul>
+          </div>
+
+          <div>
+              <h4 class="font-bold text-white mb-2">4. Points and Rewards System</h4>
+              <ul class="list-disc list-inside space-y-2">
+                  <li>The points, badges, and rewards system within Pride Pass is provided for engagement and entertainment purposes.</li>
+                  <li>Points and rewards have no cash value and cannot be redeemed for cash or transferred outside of the app.</li>
+                  <li>We reserve the right to modify, suspend, or terminate any aspect of the rewards system at any time without notice.</li>
+              </ul>
+          </div>
+
+           <div>
+              <h4 class="font-bold text-white mb-2">5. Privacy</h4>
+              <p>Your privacy is important to us. Our Privacy Policy, which is a separate document, explains how we collect, use, and protect your personal information. By using this app, you agree to the collection and use of information in accordance with our Privacy Policy.</p>
+          </div>
+
+          <div>
+              <h4 class="font-bold text-white mb-2">6. Termination</h4>
+              <ul class="list-disc list-inside space-y-2">
+                  <li>We may terminate or suspend your access to our app immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.</li>
+                  <li>You may terminate your account at any time by contacting the app administrators.</li>
+              </ul>
+          </div>
+
+          <div>
+              <h4 class="font-bold text-white mb-2">7. Disclaimers and Limitation of Liability</h4>
+              <ul class="list-disc list-inside space-y-2">
+                  <li>The app is provided on an "AS IS" and "AS AVAILABLE" basis. We make no warranties, expressed or implied, regarding the operation or availability of the app.</li>
+                  <li>The app may contain bugs or errors. We are not liable for any damages that may arise from the use of this app.</li>
+              </ul>
+          </div>
+
+          <div>
+              <h4 class="font-bold text-white mb-2">8. Governing Law</h4>
+              <p>These terms will be governed by and construed in accordance with the laws of the Republic of the Philippines, and you submit to the non-exclusive jurisdiction of the courts located in Cebu City for the resolution of any disputes.</p>
+          </div>
+
+          <div>
+              <h4 class="font-bold text-white mb-2">9. Contact Us</h4>
+              <p>If you have any questions about these Terms, please contact us at bbgsofficial@.</p>
+          </div>
+      </div>
+    `;
+    this.openFullscreenModal('Terms and Conditions', content);
 };
 
 
@@ -6492,4 +6578,3 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-
