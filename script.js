@@ -1499,7 +1499,7 @@ announcements: () => {
                     style="display: none;"
                   >
                     <i data-lucide="arrow-down-to-line" class="w-4 h-4 mr-2"></i>
-                    <span>Save App on your Home Screen</span>
+                    <span>Save App on Home Screen</span>
                   </button>
 
                   <!-- This button is ONLY for iOS/Safari -->
@@ -6492,3 +6492,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
