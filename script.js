@@ -1496,8 +1496,7 @@ announcements: () => {
         <span>Save App to Your Homescreen</span>
     </button>
 
-    <button 
-                    type="button" 
+    <button type="button" 
                     id="ios-install-button" 
                     onclick="app.showIosInstallInstructions()" 
                     class="flex items-center justify-center w-full bg-sky-600 text-white py-3 rounded-lg font-semibold transition-transform duration-200 active:scale-95 hover:bg-sky-700 text-center text-sm"
@@ -2951,21 +2950,7 @@ this.toggleAnnouncement = (element) => {
       this.openFullscreenModal('Install on iOS', content);
   };
 
-    this.showIosInstallInstructions = () => {
-      const content = `
-        <div class="text-left space-y-4">
-            <p class="font-semibold">To add this app to your Home Screen:</p>
-            <ol class="list-decimal list-inside space-y-3 text-gray-300">
-                <li>Tap the <i data-lucide="share" class="inline-block w-4 h-4 mx-1"></i> <span class="font-semibold">Share</span> button in the Safari toolbar.</li>
-                <li>Scroll down the list of options.</li>
-                <li>Tap on <i data-lucide="plus-square" class="inline-block w-4 h-4 mx-1"></i> <span class="font-semibold">"Add to Home Screen"</span>.</li>
-            </ol>
-            <img src="https://support.apple.com/library/content/dam/edam/applecare/images/en_US/safari/ios15-iphone13-pro-safari-share-sheet-add-to-home-screen.png" alt="iOS Add to Home Screen instructions" class="rounded-lg mt-4">
-        </div>
-      `;
-      this.openFullscreenModal('Install on iOS', content);
-  };
-
+   
   // --- NEW FUNCTION: MANAGE PRESENCE ---
   this.managePresence = () => {
     if (!this.state.firebaseUser) return;
