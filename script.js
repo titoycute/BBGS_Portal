@@ -1480,7 +1480,7 @@ announcements: () => {
                     <button @click="tab = 'login'" :class="{ 'pride-gradient-bg text-white': tab === 'login', 'bg-gray-700 text-gray-300': tab !== 'login' }" class="flex-1 py-2 rounded-lg font-semibold transition-all">Log In</button>
                     <button @click="tab = 'register'" :class="{ 'pride-gradient-bg text-white': tab === 'register', 'bg-gray-700 text-gray-300': tab !== 'register' }" class="flex-1 py-2 rounded-lg font-semibold transition-all">Register</button></div>
                       
-                    <!-- LOGIN FORM -->
+
                   <!-- LOGIN FORM -->
 <div x-show="tab === 'login'">
     <form id="login-form" class="space-y-4 p-4">
@@ -1563,7 +1563,7 @@ announcements: () => {
         <i data-lucide="facebook" class="w-4 h-4"></i>
         <span>Follow Us</span>
     </a>
-</div>
+    </div>
     </form>
 </div>
                     
@@ -2909,7 +2909,7 @@ this.showTermsModal = () => {
 
           <div>
               <h4 class="font-bold text-white mb-2">9. Contact Us</h4>
-              <p>If you have any questions about these Terms, please contact us at bbgsofficial@.</p>
+              <p>If you have any questions about these Terms, please contact us at bbgsofficial2021@gmail.com | +639666517133</p>
           </div>
       </div>
     `;
@@ -3047,7 +3047,7 @@ this.showTermsModal = () => {
                 <li>Tap the <i data-lucide="share" class="inline-block w-5 h-5 mx-1"></i> <span class="font-semibold">Share</span> button in Safari.</li>
                 <li>Scroll down and tap <i data-lucide="plus-square" class="inline-block w-5 h-5 mx-1"></i> <span class="font-semibold">"Add to Home Screen"</span>.</li>
             </ol>
-            <img src="https://support.apple.com/library/content/dam/edam/applecare/images/en_US/safari/ios15-iphone13-pro-safari-share-sheet-add-to-home-screen.png" alt="Visual instructions for adding an app to the home screen on iOS" class="rounded-lg mt-4 border border-gray-600">
+            <img src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/236ecf96-a881-428d-9213-83d1c7313131/dkjq9iu-8c72301d-1483-4ecc-aaab-c66f5bbdc0e7.png/v1/fill/w_894,h_894,q_70,strp/pride_pass_by_titoycute_dkjq9iu-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTEyNSIsInBhdGgiOiIvZi8yMzZlY2Y5Ni1hODgxLTQyOGQtOTIxMy04M2QxYzczMTMxMzEvZGtqcTlpdS04YzcyMzAxZC0xNDgzLTRlY2MtYWFhYi1jNjZmNWJiZGMwZTcucG5nIiwid2lkdGgiOiI8PTExMjUifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.phu1ZsDnPqfljT6nTzZbgxoOAAzUrZKpIPpg2_3h_F4" alt="Visual instructions for adding an app to the home screen on iOS" class="rounded-lg mt-4 border border-gray-600">
         </div>
       `;
       this.openFullscreenModal('Install App on iOS', content);
