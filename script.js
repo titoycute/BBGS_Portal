@@ -267,8 +267,12 @@ this.renderDashboardProfile = (user) => {
                         <div class="flex items-center text-2xl font-bold pride-gradient-text mb-1">
                             <i data-lucide="circle-star" class="w-7 h-7 mr-2 pride-gradient-text"></i>
                             <span>${user.points || 0}</span><span class="text-sm pride-gradient-text ml-1"> PTS</span>
-                        </div>
+                            
+                         
+                            </div>
+                            <p class="text-[12px] pride-gradient-text">Points in Peso: ₱${((user.points || 0) / 50).toFixed(2)}</p>
                         <p class="text-[10px] text-gray-400">${user.email || "N/A"}</p>
+                        
                     </div>
                     <div class="bg-white p-1 rounded-lg cursor-pointer" onclick="app.openMemberQrModal()">
                         <canvas id="member-qr-code"></canvas>
@@ -3047,7 +3051,7 @@ this.showTermsModal = () => {
                 <li>Tap the <i data-lucide="share" class="inline-block w-5 h-5 mx-1"></i> <span class="font-semibold">Share</span> button in Safari.</li>
                 <li>Scroll down and tap <i data-lucide="plus-square" class="inline-block w-5 h-5 mx-1"></i> <span class="font-semibold">"Add to Home Screen"</span>.</li>
             </ol>
-            <img src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/236ecf96-a881-428d-9213-83d1c7313131/dkjq9iu-8c72301d-1483-4ecc-aaab-c66f5bbdc0e7.png/v1/fill/w_894,h_894,q_70,strp/pride_pass_by_titoycute_dkjq9iu-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTEyNSIsInBhdGgiOiIvZi8yMzZlY2Y5Ni1hODgxLTQyOGQtOTIxMy04M2QxYzczMTMxMzEvZGtqcTlpdS04YzcyMzAxZC0xNDgzLTRlY2MtYWFhYi1jNjZmNWJiZGMwZTcucG5nIiwid2lkdGgiOiI8PTExMjUifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.phu1ZsDnPqfljT6nTzZbgxoOAAzUrZKpIPpg2_3h_F4" alt="Visual instructions for adding an app to the home screen on iOS" class="rounded-lg mt-4 border border-gray-600">
+            <img src="IOSguide.png" alt="Visual instructions for adding an app to the home screen on iOS" class="rounded-lg mt-4 border border-gray-600">
         </div>
       `;
       this.openFullscreenModal('Install App on iOS', content);
